@@ -239,14 +239,36 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🫙 Cream Separator</div>
+    <div class="card-title">🫙 Cream Separator (from CM)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Cream is separated from today's CM. Enter how much CM will be skimmed.</div>
     <div class="field-row c2">
-      <div class="field"><label>Cream produced (kg)</label><input type="number" id="cream-kg" placeholder="0" step="0.1" min="0" oninput="onMilkChange()"></div>
-      <div class="field"><label>Cream fat %</label><input type="number" id="cream-fat" placeholder="60" step="1" value="60" min="0" max="100"></div>
+      <div class="field"><label>CM to skim (L)</label><input type="number" id="cm-to-skim" placeholder="0" step="1" min="0" oninput="calcSeparator()"></div>
+      <div class="field"><label>CM fat % (input)</label><input type="number" id="cm-skim-fat" placeholder="4.0" step="0.1" min="0" oninput="calcSeparator()"></div>
     </div>
     <div class="field-row c2">
+      <div class="field"><label>Cream fat %</label><input type="number" id="cream-fat" placeholder="60" step="1" value="60" min="0" max="100" oninput="calcSeparator()"></div>
+      <div class="field"><label>SM fat after skim %</label><input type="number" id="sm-fat-after" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcSeparator()"></div>
+    </div>
+    <div id="separator-output" style="background:var(--cream);border-radius:10px;padding:10px;margin-top:8px;font-size:12px;display:none;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="color:var(--muted);">Cream produced</span>
+        <span id="sep-cream-out" style="font-weight:700;color:var(--amber);">— kg</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="color:var(--muted);">SM produced</span>
+        <span id="sep-sm-out" style="font-weight:700;color:var(--blue);">— L</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:var(--muted);">Extra CM needed (if short)</span>
+        <span id="sep-extra-cm" style="font-weight:700;color:var(--red);">—</span>
+      </div>
+    </div>
+    <div class="field-row c2" style="margin-top:10px;">
+      <div class="field"><label>Actual cream avail (kg)</label><input type="number" id="cream-kg" placeholder="0" step="0.1" min="0" oninput="onMilkChange()"></div>
       <div class="field"><label>SM from separator (L)</label><input type="number" id="sm-sep-vol" placeholder="0" step="1" min="0" oninput="onMilkChange()"></div>
-      <div class="field"><label>SM separator SNF %</label><input type="number" id="sm-sep-snf" placeholder="9.0" step="0.1" min="0"></div>
+    </div>
+    <div class="field-row c2">
+      <div class="field"><label>SM sep SNF %</label><input type="number" id="sm-sep-snf" placeholder="9.0" step="0.1" min="0"></div>
     </div>
   </div>
 
@@ -294,7 +316,7 @@ const YIELD = {
 const PRODUCTS = [
   {id:'paneer_lite',  name:'Lite Paneer',   icon:'🥛', fat:0.75, milkBase:'BM_SM', group:'paneer',
    coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
-  {id:'paneer_med',   name:'Medium Paneer', icon:'🧀', fat:1.75, milkBase:'BM_SM', group:'paneer',
+  {id:'paneer_med',   name:'Medium Paneer', icon:'🧀', fat:1.70, milkBase:'BM_SM', group:'paneer',
    coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
   {id:'paneer_malai', name:'Malai Paneer',  icon:'🧈', fat:4.5,  milkBase:'BM_SM', group:'paneer',
    coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
@@ -430,6 +452,80 @@ function getMilkPool() {
     bm1Vol:bm1v, bm2Vol:bm2v,
     creamKg:g('cream-kg')
   };
+}
+
+// ══ CREAM SEPARATOR CALCULATOR ══
+// Fat balance: cm_vol * cm_fat = cream_kg * cream_fat + sm_vol * sm_fat
+// cream_kg in kg (density 0.9 kg/L), sm_vol in L
+function calcSeparator() {
+  const cmVol   = parseFloat(document.getElementById('cm-to-skim')?.value)||0;
+  const cmFat   = parseFloat(document.getElementById('cm-skim-fat')?.value)||4.0;
+  const creamFat= parseFloat(document.getElementById('cream-fat')?.value)||60;
+  const smFat   = parseFloat(document.getElementById('sm-fat-after')?.value)||0.1;
+  const out     = document.getElementById('separator-output');
+  if(cmVol===0){ out.style.display='none'; return; }
+
+  // Fat balance: cmVol * cmFat = cream_kg * creamFat + smVol * smFat
+  // Mass balance: cmVol * 1.028 = cream_kg + smVol * 1.032  (approx densities)
+  // Solve simultaneously:
+  const cmFatFrac   = cmFat/100;
+  const cFatFrac    = creamFat/100;
+  const smFatFrac   = smFat/100;
+  const cmMass      = cmVol * 1.028;
+  // cream_kg = (cmVol*cmFatFrac - cmVol*smFatFrac) / (cFatFrac - smFatFrac) * (1.028/1.032... approx)
+  // Simpler: assume SM density ~1.032, cream density 0.9
+  // cmVol * cmFatFrac = cream_kg*cFatFrac + smVol*smFatFrac
+  // cmMass = cream_kg + smVol*1.032
+  // → smVol = (cmMass - cream_kg)/1.032
+  // → cmVol*cmFatFrac = cream_kg*cFatFrac + (cmMass-cream_kg)/1.032 * smFatFrac
+  // → solve for cream_kg:
+  const A = cFatFrac - smFatFrac/1.032;
+  const B = cmVol*cmFatFrac - cmMass*smFatFrac/1.032;
+  const creamKg = B/A;
+  const smVol   = (cmMass - creamKg)/1.032;
+
+  out.style.display='block';
+  document.getElementById('sep-cream-out').textContent = creamKg.toFixed(2)+' kg';
+  document.getElementById('sep-sm-out').textContent    = smVol.toFixed(0)+' L';
+
+  // How much paneer cream is needed vs available
+  const paneers = ['paneer_lite','paneer_med','paneer_malai'];
+  let totalCreamNeeded = 0;
+  paneers.forEach(pid => {
+    const vol = STATE.batchVol[pid]||0; if(vol===0) return;
+    const prod = PRODUCTS.find(p=>p.id===pid);
+    const pool = getMilkPool();
+    const need = calcCreamForPaneer(vol, prod.fat, pool.bmFat, pool.bmVol, pool.smFat);
+    totalCreamNeeded += need;
+  });
+
+  const extraCm = totalCreamNeeded > creamKg
+    ? `Need ${(totalCreamNeeded-creamKg).toFixed(1)}kg more cream — order ~${Math.ceil((totalCreamNeeded-creamKg)/creamKg*cmVol/10)*10}L extra CM`
+    : '✓ Sufficient';
+  document.getElementById('sep-extra-cm').textContent = extraCm;
+  document.getElementById('sep-extra-cm').style.color = totalCreamNeeded>creamKg ? 'var(--red)' : 'var(--green2)';
+
+  // Auto-fill actual cream and SM fields
+  document.getElementById('cream-kg').value    = creamKg.toFixed(2);
+  document.getElementById('sm-sep-vol').value  = smVol.toFixed(0);
+  onMilkChange();
+}
+
+// Calculate cream needed for a paneer batch given BM available
+// Logic: BM is fixed input, SM fills rest of batch, cream makes up fat deficit
+function calcCreamForPaneer(batchVol, targetFatPct, bmFat, bmAvail, smFat, creamFat) {
+  creamFat = creamFat || (parseFloat(document.getElementById('cream-fat')?.value)||60)/100;
+  const targetFat = targetFatPct/100;
+  const smFatFrac = smFat || 0.001;
+  // BM used = min(bmAvail, batchVol)
+  const bmUsed = Math.min(bmAvail, batchVol);
+  const smUsed = batchVol - bmUsed;
+  // Fat from BM + SM
+  const fatFromMilk = bmUsed*(bmFat/100) + smUsed*smFatFrac;
+  // Fat needed in total vat
+  const fatNeeded = batchVol * 1.032 * targetFat;
+  const fatDeficit = fatNeeded - fatFromMilk;
+  return Math.max(0, fatDeficit / creamFat);
 }
 
 function onMilkChange() {
@@ -609,11 +705,16 @@ function calculateAndRenderRecipes() {
     }
 
     if(prod.milkBase==='BM_SM') {
-      const blend = pearson(vol, prod.fat, pool.bmFat, pool.smFat);
-      bmV=blend.aVol; smV=blend.bVol;
+      // Paneer blending: BM is fixed (scarce), SM fills rest, cream balances fat
+      const creamFatPct = parseFloat(document.getElementById('cream-fat')?.value)||60;
+      bmV = Math.min(pool.bmVol, vol);  // use all available BM up to batch size
+      smV = vol - bmV;                   // SM fills the rest
+      const creamKg = calcCreamForPaneer(vol, prod.fat, pool.bmFat, pool.bmVol, pool.smFat, creamFatPct/100);
       bmUsed+=bmV; smUsed+=smV;
-      if(bmV>pool.bmVol) warnings.push(`Need ${bmV.toFixed(0)}L BM, only ${pool.bmVol}L available`);
-      if(smV>pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol}L available`);
+      if(smV>pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol.toFixed(0)}L available`);
+      if(creamKg>pool.creamKg) warnings.push(`Need ${creamKg.toFixed(2)}kg cream, only ${pool.creamKg.toFixed(2)}kg available — order extra CM from Vendor 2`);
+      // Store cream on recipe for display
+      recipe.creamKg = creamKg;
     } else if(prod.milkBase==='CM') {
       cmV=vol; cmUsed+=vol;
       if(cmV>pool.cmVol) warnings.push(`Need ${cmV.toFixed(0)}L CM, only ${pool.cmVol}L available`);
@@ -649,6 +750,7 @@ function calculateAndRenderRecipes() {
     if(bmV>0) milkRows.push({label:'Buffalo Milk (BM)',qty:bmV.toFixed(0),unit:'L'});
     if(cmV>0) milkRows.push({label:'Cow Milk (CM)',qty:cmV.toFixed(0),unit:'L'});
     if(smV>0) milkRows.push({label:'Skim Milk (SM)',qty:smV.toFixed(0),unit:'L'});
+    if(recipe.creamKg>0) milkRows.push({label:'Cream',qty:recipe.creamKg.toFixed(2),unit:'kg'});
 
     // SMP row in ingredients
     const addIng = [];
@@ -733,9 +835,13 @@ function copyOne(prodId) {
   if(!prod.fromCurd) {
     msg += `*MILK:*\n`;
     if(prod.milkBase==='BM_SM') {
-      const b = pearson(vol, prod.fat, pool.bmFat, pool.smFat);
-      if(b.aVol>0) msg += `BM  ${b.aVol.toFixed(0)} lit\n`;
-      if(b.bVol>0) msg += `SM  ${b.bVol.toFixed(0)} lit\n`;
+      const cFP = parseFloat(document.getElementById('cream-fat')?.value)||60;
+      const bmVc = Math.min(pool.bmVol, vol);
+      const smVc = vol - bmVc;
+      const crKgC = calcCreamForPaneer(vol, prod.fat, pool.bmFat, pool.bmVol, pool.smFat, cFP/100);
+      if(bmVc>0) msg += `BM  ${bmVc.toFixed(0)} lit\n`;
+      if(smVc>0) msg += `SM  ${smVc.toFixed(0)} lit\n`;
+      if(crKgC>0) msg += `Cream  ${crKgC.toFixed(2)} kg\n`;
     } else if(prod.milkBase==='CM') msg += `CM  ${vol} lit\n`;
     else if(prod.milkBase==='SM')   msg += `SM  ${vol} lit\n`;
     else if(prod.milkBase==='CM_SM') {
@@ -788,9 +894,12 @@ function copyAll() {
 
     if(!prod.fromCurd) {
       if(prod.milkBase==='BM_SM') {
-        const b=pearson(vol,prod.fat,pool.bmFat,pool.smFat);
-        if(b.aVol>0) msg+=`BM ${b.aVol.toFixed(0)}lit\n`;
-        if(b.bVol>0) msg+=`SM ${b.bVol.toFixed(0)}lit\n`;
+        const cFatPct2=parseFloat(document.getElementById('cream-fat')?.value)||60;
+        const bmVa=Math.min(pool.bmVol,vol), smVa=vol-bmVa;
+        const crKg=calcCreamForPaneer(vol,prod.fat,pool.bmFat,pool.bmVol,pool.smFat,cFatPct2/100);
+        if(bmVa>0) msg+=`BM ${bmVa.toFixed(0)}lit\n`;
+        if(smVa>0) msg+=`SM ${smVa.toFixed(0)}lit\n`;
+        if(crKg>0) msg+=`Cream ${crKg.toFixed(2)}kg\n`;
       } else if(prod.milkBase==='CM') msg+=`CM ${vol}lit\n`;
       else if(prod.milkBase==='SM')   msg+=`SM ${vol}lit\n`;
       else if(prod.milkBase==='CM_SM'){
