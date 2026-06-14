@@ -499,7 +499,7 @@ function getMilkPool() {
   const cmSnf=cmVol>0?(cm1v*cm1s+cm2v*cm2s)/cmVol:8.5;
   // Total SM = vendor SM + separator SM
   const totalSmVol=smv+smSepV;
-  const totalSmSnf=totalSmVol>0?(smv*sms+smSepV*smSepS)/totalSmVol:8.5;
+  const totalSmSnf=totalSmVol>0?((smv*(sms||8.5)+smSepV*(smSepS||9.0))/totalSmVol):8.5;
 
   return {
     bmVol, bmFat, bmSnf,
@@ -986,7 +986,7 @@ function calculateAndRenderRecipes() {
     const demand = STATE.demand[prod.id]||0;
     const produce = Math.max(0, demand - stock);
 
-    let bmV=0, cmV=0, smV=0, smpKg=0, warnings=[];
+    let bmV=0, cmV=0, smV=0, smpKg=0, creamKg=0, warnings=[];
     const ings = [];
 
     if(prod.fromCurd) {
@@ -1008,7 +1008,7 @@ function calculateAndRenderRecipes() {
       if(smV>pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol.toFixed(0)}L available`);
       if(creamKg>pool.creamKg) warnings.push(`Need ${creamKg.toFixed(2)}kg cream, only ${pool.creamKg.toFixed(2)}kg available — order extra CM from Vendor 2`);
       // Store cream on recipe for display
-      recipe.creamKg = creamKg;
+      creamKg = creamKg;
     } else if(prod.milkBase==='CM') {
       cmV=vol; cmUsed+=vol;
       if(cmV>pool.cmVol) warnings.push(`Need ${cmV.toFixed(0)}L CM, only ${pool.cmVol}L available`);
@@ -1026,9 +1026,9 @@ function calculateAndRenderRecipes() {
     let milkSnf = 0;
     let milkDensity = 1.030;
     if(prod.id==='curd_lite') {
-      targetSnf=snfLiteCurd; milkSnf=pool.smSnf; milkDensity=1.032;
+      targetSnf=snfLiteCurd; milkSnf=pool.smSnf||8.5; milkDensity=1.032;
     } else if(prod.id==='curd_fresh') {
-      targetSnf=snfFreshCurd; milkSnf=pool.cmSnf; milkDensity=1.028;
+      targetSnf=snfFreshCurd; milkSnf=pool.cmSnf||8.5; milkDensity=1.028;
     } else if(prod.id==='khoya_cm') {
       milkSnf=pool.cmSnf;
     } else if(prod.id==='khoya_std') {
@@ -1044,7 +1044,7 @@ function calculateAndRenderRecipes() {
     if(bmV>0) milkRows.push({label:'Buffalo Milk (BM)',qty:bmV.toFixed(0),unit:'L'});
     if(cmV>0) milkRows.push({label:'Cow Milk (CM)',qty:cmV.toFixed(0),unit:'L'});
     if(smV>0) milkRows.push({label:'Skim Milk (SM)',qty:smV.toFixed(0),unit:'L'});
-    if(recipe.creamKg>0) milkRows.push({label:'Cream',qty:recipe.creamKg.toFixed(2),unit:'kg'});
+    if(creamKg>0) milkRows.push({label:'Cream',qty:creamKg.toFixed(2),unit:'kg'});
 
     // SMP row in ingredients
     const addIng = [];
