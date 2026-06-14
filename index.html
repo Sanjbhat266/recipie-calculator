@@ -144,13 +144,17 @@
 <div class="screen active" id="screen-step1">
 
   <div class="card">
-    <div class="card-title">⚙️ SNF Targets <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)">(editable)</span></div>
+    <div class="card-title">⚙️ Recipe Parameters <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)">(editable)</span></div>
     <div class="snf-row">
-      <div><div class="snf-label">🥄 Lite Curd</div><div class="snf-sub">SM base · SMP addition</div></div>
+      <div><div class="snf-label">🐃 BM ratio in paneer</div><div class="snf-sub">BM as % of (BM+SM) — data avg 20%</div></div>
+      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="bm-ratio" value="20" type="number" step="1" min="5" max="50" oninput="calcMilkNeeded()"><span style="font-size:11px;color:var(--muted);">%</span></div>
+    </div>
+    <div class="snf-row">
+      <div><div class="snf-label">🥄 Lite Curd SNF target</div><div class="snf-sub">SM base · SMP addition</div></div>
       <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="snf-lite-curd" value="11.5" type="number" step="0.1" min="8" max="15"><span style="font-size:11px;color:var(--muted);">%</span></div>
     </div>
     <div class="snf-row">
-      <div><div class="snf-label">🍶 Fresh Curd</div><div class="snf-sub">CM base · SMP addition</div></div>
+      <div><div class="snf-label">🍶 Fresh Curd SNF target</div><div class="snf-sub">CM base · SMP addition</div></div>
       <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="snf-fresh-curd" value="10.5" type="number" step="0.1" min="8" max="15"><span style="font-size:11px;color:var(--muted);">%</span></div>
     </div>
   </div>
@@ -175,17 +179,22 @@
   <div class="card">
     <div class="card-title">🏠 Vendor 1 — Natural Supply (fixed)</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">V1 supplies whatever the village produces — not on order. Enter expected today based on season/history.</div>
-    <div class="field-row c2">
-      <div class="field"><label>CM Morning (L)</label><input type="number" id="v1-cm-morn" placeholder="84" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM Evening (L)</label><input type="number" id="v1-cm-eve" placeholder="32" min="0" oninput="calcMilkOrder()"></div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Morning (9:30 AM)</div>
+    <div class="field-row c3">
+      <div class="field"><label>CM (L)</label><input type="number" id="v1-cm-morn" placeholder="84" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM Fat %</label><input type="number" id="v1-cm-morn-fat" placeholder="3.5" step="0.1" value="3.5" min="0" max="10" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM SNF %</label><input type="number" id="v1-cm-morn-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
     </div>
-    <div class="field-row c2">
-      <div class="field"><label>BM Morning (L)</label><input type="number" id="v1-bm-morn" placeholder="8" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM fat %</label><input type="number" id="v1-cm-fat" placeholder="4.0" step="0.1" value="4.0" min="0" max="10" oninput="calcMilkOrder()"></div>
+    <div class="field-row c3">
+      <div class="field"><label>BM (L)</label><input type="number" id="v1-bm-morn" placeholder="8" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>BM Fat %</label><input type="number" id="v1-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>BM SNF %</label><input type="number" id="v1-bm-snf" placeholder="9.0" step="0.1" value="9.0" min="0" oninput="calcMilkOrder()"></div>
     </div>
-    <div class="field-row c2">
-      <div class="field"><label>BM fat %</label><input type="number" id="v1-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>SNF % (both)</label><input type="number" id="v1-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 4px;">Evening (mixed with morning)</div>
+    <div class="field-row c3">
+      <div class="field"><label>CM (L)</label><input type="number" id="v1-cm-eve" placeholder="32" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM Fat %</label><input type="number" id="v1-cm-eve-fat" placeholder="3.3" step="0.1" value="3.3" min="0" max="10" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM SNF %</label><input type="number" id="v1-cm-eve-snf" placeholder="8.3" step="0.1" value="8.3" min="0" oninput="calcMilkOrder()"></div>
     </div>
   </div>
 
@@ -443,9 +452,9 @@ function calcMilkNeeded() {
     let bm=0, cm=0, sm=0;
 
     if(p.milkBase === 'BM_SM') {
-      // Approx blend: most is SM for lite, more BM for malai
-      const smFrac = p.id==='paneer_malai' ? 0.1 : p.id==='paneer_med' ? 0.8 : 0.95;
-      sm = milkL * smFrac; bm = milkL * (1-smFrac);
+      // BM is a quality ratio (~20% of batch), SM fills rest — consistent across all paneer variants
+      const bmRatio = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
+      bm = milkL * bmRatio; sm = milkL * (1 - bmRatio);
     } else if(p.milkBase === 'CM') { cm = milkL; }
     else if(p.milkBase === 'SM')  { sm = milkL; }
     else if(p.milkBase === 'CM_SM') { sm = milkL*0.5; cm = milkL*0.5; }
@@ -514,12 +523,25 @@ function getMilkPool() {
 function calcMilkOrder() {
   const g = id => parseFloat(document.getElementById(id)?.value)||0;
 
-  // V1 natural supply
-  const v1CmVol  = g('v1-cm-morn') + g('v1-cm-eve');
-  const v1BmVol  = g('v1-bm-morn');
-  const v1CmFat  = g('v1-cm-fat')||4.0;
+  // V1 natural supply — morning and evening blended by volume-weighted average
+  const v1CmMornVol = g('v1-cm-morn');
+  const v1CmEveVol  = g('v1-cm-eve');
+  const v1CmVol     = v1CmMornVol + v1CmEveVol;
+  const v1BmVol     = g('v1-bm-morn');
+  // Blended CM fat and SNF (volume-weighted)
+  const v1CmMornFat = g('v1-cm-morn-fat')||3.5;
+  const v1CmMornSnf = g('v1-cm-morn-snf')||8.5;
+  const v1CmEveFat  = g('v1-cm-eve-fat')||3.3;
+  const v1CmEveSnf  = g('v1-cm-eve-snf')||8.3;
+  const v1CmFat = v1CmVol > 0
+    ? (v1CmMornVol*v1CmMornFat + v1CmEveVol*v1CmEveFat) / v1CmVol
+    : 3.5;
+  const v1CmSnf = v1CmVol > 0
+    ? (v1CmMornVol*v1CmMornSnf + v1CmEveVol*v1CmEveSnf) / v1CmVol
+    : 8.5;
   const v1BmFat  = g('v1-bm-fat')||6.5;
-  const v1Snf    = g('v1-snf')||8.5;
+  const v1BmSnf  = g('v1-bm-snf')||9.0;
+  const v1Snf    = v1CmSnf; // for backward compat
 
   // Separator params
   const creamFatPct  = g('v4-cream-fat')||60;
@@ -556,11 +578,14 @@ function calcMilkOrder() {
     let bm=0, cm=0, sm=0, cream=0;
 
     if(p.milkBase==='BM_SM') {
-      // BM all available (V1 + whatever ordered from V2), SM fills rest
-      const totalBmAvail = v1BmVol; // before V2 order — shows baseline
-      bm = Math.min(totalBmAvail, vol);
-      sm = vol - bm;
-      const fatFromMilk = bm*(v1BmFat/100) + sm*(v3SmFat/100);
+      // BM is a quality ratio (~20% of batch), not limited to V1 supply
+      // V2 BM is ordered to make up the difference
+      const bmRatio = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
+      bm = vol * bmRatio;
+      sm = vol * (1 - bmRatio);
+      // Blended BM fat (V1 + V2 combined)
+      const blendedBmFat = (v1BmVol*v1BmFat + (bm-v1BmVol)*v2BmFat) / bm;
+      const fatFromMilk = bm*(blendedBmFat/100) + sm*(v3SmFat/100);
       const fatNeeded   = vol*1.032*(p.fat/100);
       cream = Math.max(0, (fatNeeded-fatFromMilk)/creamFatFrac);
       bmNeeded+=bm; smNeeded+=sm; creamNeeded+=cream;
@@ -576,9 +601,9 @@ function calcMilkOrder() {
     breakdown.push({p, vol, bm, cm, sm, cream});
   });
 
-  // ── BM gap ──
+  // ── BM gap — V2 BM is ordered to reach the quality ratio target ──
   const bmGap = Math.max(0, bmNeeded - v1BmVol);
-  const v2BmOrder = Math.min(bmGap, V2_MAX_BM);
+  const v2BmOrder = Math.min(Math.ceil(bmGap/10)*10, V2_MAX_BM); // round up to 10L
 
   // ── Cream deficit → extra CM from V2 ──
   const creamDeficit = Math.max(0, creamNeeded - creamFromV1);
@@ -616,7 +641,7 @@ function calcMilkOrder() {
 
   // Store for use in Step 3 auto-fill
   STATE.milkOrder = {
-    v1CmVol, v1BmVol, v1CmFat, v1BmFat, v1Snf,
+    v1CmVol, v1BmVol, v1CmFat, v1CmSnf, v1BmFat, v1BmSnf, v1Snf,
     creamFromV1, smFromV1,
     v2BmOrder, v2CmForCream, totalCreamFromV2, smFromV2Cm,
     v3SmOrder:v3SmOrderCapped,
@@ -695,13 +720,13 @@ function calcMilkOrder() {
     const sv = (id, val) => { const el=document.getElementById(id); if(el&&val) el.value=val; };
     sv('bm1-vol', v1BmVol);
     sv('bm1-fat', v1BmFat);
-    sv('bm1-snf', v1Snf);
+    sv('bm1-snf', v1BmSnf.toFixed(1));
     sv('bm2-vol', v2BmOrder);
     sv('bm2-fat', v2BmFat||v1BmFat);
     sv('bm2-snf', v2BmSnf||v1Snf);
     sv('cm1-vol', v1CmVol);
-    sv('cm1-fat', v1CmFat);
-    sv('cm1-snf', v1Snf);
+    sv('cm1-fat', v1CmFat.toFixed(2));
+    sv('cm1-snf', v1CmSnf.toFixed(2));
     sv('cm2-vol', v2CmForCream);
     sv('cm2-fat', v2CmFat||4.0);
     sv('cm2-snf', v2CmSnf||8.5);
@@ -711,7 +736,10 @@ function calcMilkOrder() {
     sv('v4-cream-fat', creamFatPct);
     // Separator section
     sv('cm-to-skim', v1CmVol+v2CmForCream);
-    sv('cm-skim-fat', ((v1CmVol*v1CmFat + v2CmForCream*v2CmFat)/(v1CmVol+v2CmForCream||1)).toFixed(1));
+    const blendedSkimFat = (v1CmVol+v2CmForCream) > 0
+      ? (v1CmVol*v1CmFat + v2CmForCream*(g('v2-cm-fat')||4.0)) / (v1CmVol+v2CmForCream)
+      : 4.0;
+    sv('cm-skim-fat', blendedSkimFat.toFixed(2));
     sv('cream-fat', creamFatPct);
     sv('sm-fat-after', smFatAfter);
     sv('cream-kg', totalCreamAvail.toFixed(2));
@@ -727,7 +755,7 @@ function copyMilkOrder() {
   const date = new Date().toLocaleDateString('en-IN');
   let msg = `*🥛 Gaavn Fresh — Milk Order*\n📅 ${date}\n\n`;
   msg += `*Vendor 1* (natural supply):\n`;
-  msg += `CM: ${o.v1CmVol}L @ ${o.v1CmFat}% fat\n`;
+  msg += `CM: ${o.v1CmVol}L @ ${o.v1CmFat.toFixed(2)}% fat / ${o.v1CmSnf ? o.v1CmSnf.toFixed(2)+'% SNF' : ''}\n`;
   msg += `BM: ${o.v1BmVol}L @ ${o.v1BmFat}% fat\n\n`;
   if(o.v2BmOrder>0||o.v2CmForCream>0) {
     msg += `*Vendor 2* (order):\n`;
@@ -999,16 +1027,19 @@ function calculateAndRenderRecipes() {
     }
 
     if(prod.milkBase==='BM_SM') {
-      // Paneer blending: BM is fixed (scarce), SM fills rest, cream balances fat
+      // Paneer: BM is quality input at fixed ratio (~20%), SM fills rest, cream balances fat
       const creamFatPct = parseFloat(document.getElementById('cream-fat')?.value)||60;
-      bmV = Math.min(pool.bmVol, vol);  // use all available BM up to batch size
+      const bmRatioPct  = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
+      bmV = vol * bmRatioPct;            // BM fixed at quality ratio
       smV = vol - bmV;                   // SM fills the rest
-      const creamKg = calcCreamForPaneer(vol, prod.fat, pool.bmFat, pool.bmVol, pool.smFat, creamFatPct/100);
+      // Fat balance: cream makes up deficit after BM + SM
+      const fatFromMilk = bmV*(pool.bmFat/100) + smV*(pool.smFat||0.001);
+      const fatNeeded   = vol * 1.032 * (prod.fat/100);
+      creamKg = Math.max(0, (fatNeeded - fatFromMilk) / (creamFatPct/100));
       bmUsed+=bmV; smUsed+=smV;
-      if(smV>pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol.toFixed(0)}L available`);
-      if(creamKg>pool.creamKg) warnings.push(`Need ${creamKg.toFixed(2)}kg cream, only ${pool.creamKg.toFixed(2)}kg available — order extra CM from Vendor 2`);
-      // Store cream on recipe for display
-      creamKg = creamKg;
+      if(bmV > pool.bmVol) warnings.push(`Need ${bmV.toFixed(0)}L BM, only ${pool.bmVol.toFixed(0)}L available — order more from V2`);
+      if(smV > pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol.toFixed(0)}L available`);
+      if(creamKg > pool.creamKg) warnings.push(`Need ${creamKg.toFixed(2)}kg cream, only ${pool.creamKg.toFixed(2)}kg available — skim more CM`);
     } else if(prod.milkBase==='CM') {
       cmV=vol; cmUsed+=vol;
       if(cmV>pool.cmVol) warnings.push(`Need ${cmV.toFixed(0)}L CM, only ${pool.cmVol}L available`);
@@ -1130,9 +1161,11 @@ function copyOne(prodId) {
     msg += `*MILK:*\n`;
     if(prod.milkBase==='BM_SM') {
       const cFP = parseFloat(document.getElementById('cream-fat')?.value)||60;
-      const bmVc = Math.min(pool.bmVol, vol);
+      const bmRatioWA = (parseFloat(document.getElementById('bm-ratio')?.value)||20)/100;
+      const bmVc = vol * bmRatioWA;
       const smVc = vol - bmVc;
-      const crKgC = calcCreamForPaneer(vol, prod.fat, pool.bmFat, pool.bmVol, pool.smFat, cFP/100);
+      const fatFromMilkWA = bmVc*(pool.bmFat/100) + smVc*(pool.smFat||0.001);
+      const crKgC = Math.max(0, (vol*1.032*(prod.fat/100) - fatFromMilkWA)/(cFP/100));
       if(bmVc>0) msg += `BM  ${bmVc.toFixed(0)} lit\n`;
       if(smVc>0) msg += `SM  ${smVc.toFixed(0)} lit\n`;
       if(crKgC>0) msg += `Cream  ${crKgC.toFixed(2)} kg\n`;
@@ -1189,8 +1222,10 @@ function copyAll() {
     if(!prod.fromCurd) {
       if(prod.milkBase==='BM_SM') {
         const cFatPct2=parseFloat(document.getElementById('cream-fat')?.value)||60;
-        const bmVa=Math.min(pool.bmVol,vol), smVa=vol-bmVa;
-        const crKg=calcCreamForPaneer(vol,prod.fat,pool.bmFat,pool.bmVol,pool.smFat,cFatPct2/100);
+        const bmRatioAll=(parseFloat(document.getElementById('bm-ratio')?.value)||20)/100;
+        const bmVa=vol*bmRatioAll, smVa=vol-bmVa;
+        const fatFromMilkAll=bmVa*(pool.bmFat/100)+smVa*(pool.smFat||0.001);
+        const crKg=Math.max(0,(vol*1.032*(prod.fat/100)-fatFromMilkAll)/(cFatPct2/100));
         if(bmVa>0) msg+=`BM ${bmVa.toFixed(0)}lit\n`;
         if(smVa>0) msg+=`SM ${smVa.toFixed(0)}lit\n`;
         if(crKg>0) msg+=`Cream ${crKg.toFixed(2)}kg\n`;
