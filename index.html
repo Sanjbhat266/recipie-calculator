@@ -134,9 +134,10 @@
 
 <div class="stepper">
   <button class="step-btn active" id="s1" onclick="goStep(1)">1·Demand</button>
-  <button class="step-btn" id="s2" onclick="goStep(2)">2·Milk</button>
-  <button class="step-btn" id="s3" onclick="goStep(3)">3·Schedule</button>
-  <button class="step-btn" id="s4" onclick="goStep(4)">4·Recipe</button>
+  <button class="step-btn" id="s2" onclick="goStep(2)">2·Order</button>
+  <button class="step-btn" id="s3" onclick="goStep(3)">3·Milk</button>
+  <button class="step-btn" id="s4" onclick="goStep(4)">4·Schedule</button>
+  <button class="step-btn" id="s5" onclick="goStep(5)">5·Recipe</button>
 </div>
 
 <!-- ══ STEP 1: DEMAND & STOCK ══ -->
@@ -168,8 +169,63 @@
 
 </div>
 
-<!-- ══ STEP 2: MILK INPUT ══ -->
+<!-- ══ STEP 2: MILK ORDER ══ -->
 <div class="screen" id="screen-step2">
+
+  <div class="card">
+    <div class="card-title">🏠 Vendor 1 — Natural Supply (fixed)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">V1 supplies whatever the village produces — not on order. Enter expected today based on season/history.</div>
+    <div class="field-row c2">
+      <div class="field"><label>CM Morning (L)</label><input type="number" id="v1-cm-morn" placeholder="84" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM Evening (L)</label><input type="number" id="v1-cm-eve" placeholder="32" min="0" oninput="calcMilkOrder()"></div>
+    </div>
+    <div class="field-row c2">
+      <div class="field"><label>BM Morning (L)</label><input type="number" id="v1-bm-morn" placeholder="8" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM fat %</label><input type="number" id="v1-cm-fat" placeholder="4.0" step="0.1" value="4.0" min="0" max="10" oninput="calcMilkOrder()"></div>
+    </div>
+    <div class="field-row c2">
+      <div class="field"><label>BM fat %</label><input type="number" id="v1-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>SNF % (both)</label><input type="number" id="v1-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🏪 Vendor 2 — On Order (CM + BM)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Max capacity: 480L CM · 160L BM. Only order CM if cream is short — SM is cheaper.</div>
+    <div class="field-row c2">
+      <div class="field"><label>CM fat %</label><input type="number" id="v2-cm-fat" placeholder="4.0" step="0.1" value="4.0" min="0" max="10" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>BM fat %</label><input type="number" id="v2-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
+    </div>
+    <div class="field-row c2">
+      <div class="field"><label>CM SNF %</label><input type="number" id="v2-cm-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>BM SNF %</label><input type="number" id="v2-bm-snf" placeholder="9.0" step="0.1" value="9.0" min="0" oninput="calcMilkOrder()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🥛 Vendor 3 — Skim Milk (on order)</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Max capacity: 2000L. Fat ~0.1%. Order only what's needed after accounting for SM from separator.</div>
+    <div class="field-row c2">
+      <div class="field"><label>SM fat %</label><input type="number" id="v3-sm-fat" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>SM SNF %</label><input type="number" id="v3-sm-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🫙 Cream Separator Parameters</div>
+    <div class="field-row c2">
+      <div class="field"><label>Cream fat % output</label><input type="number" id="v4-cream-fat" placeholder="60" step="1" value="60" min="0" max="100" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>SM fat % after skim</label><input type="number" id="v4-sm-fat-after" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcMilkOrder()"></div>
+    </div>
+  </div>
+
+  <div id="order-recommendation-block"></div>
+
+</div>
+
+<!-- ══ STEP 3: MILK INPUT (was Step 2) ══ -->
+<!-- ══ STEP 3: MILK INPUT ══ -->
+<div class="screen" id="screen-step3">
 
   <div class="card">
     <div class="card-title">🐃 Buffalo Milk (BM)</div>
@@ -276,8 +332,8 @@
 
 </div>
 
-<!-- ══ STEP 3: PRODUCTION SCHEDULE ══ -->
-<div class="screen" id="screen-step3">
+<!-- ══ STEP 4: PRODUCTION SCHEDULE ══ -->
+<div class="screen" id="screen-step4">
   <div class="card">
     <div class="card-title">🕐 Production Schedule by Milk Arrival</div>
     <div id="schedule-block"></div>
@@ -288,8 +344,8 @@
   </div>
 </div>
 
-<!-- ══ STEP 4: RECIPE OUTPUT ══ -->
-<div class="screen" id="screen-step4">
+<!-- ══ STEP 5: RECIPE OUTPUT ══ -->
+<div class="screen" id="screen-step5">
   <div id="recipe-output"></div>
 </div>
 
@@ -452,6 +508,244 @@ function getMilkPool() {
     bm1Vol:bm1v, bm2Vol:bm2v,
     creamKg:g('cream-kg')
   };
+}
+
+// ══ MILK ORDER CALCULATOR ══
+function calcMilkOrder() {
+  const g = id => parseFloat(document.getElementById(id)?.value)||0;
+
+  // V1 natural supply
+  const v1CmVol  = g('v1-cm-morn') + g('v1-cm-eve');
+  const v1BmVol  = g('v1-bm-morn');
+  const v1CmFat  = g('v1-cm-fat')||4.0;
+  const v1BmFat  = g('v1-bm-fat')||6.5;
+  const v1Snf    = g('v1-snf')||8.5;
+
+  // Separator params
+  const creamFatPct  = g('v4-cream-fat')||60;
+  const smFatAfter   = g('v4-sm-fat-after')||0.1;
+  const creamFatFrac = creamFatPct/100;
+  const smFatFrac    = smFatAfter/100;
+
+  // V2 & V3 params
+  const v2CmFat  = g('v2-cm-fat')||4.0;
+  const v2BmFat  = g('v2-bm-fat')||6.5;
+  const v2CmSnf  = g('v2-cm-snf')||8.5;
+  const v2BmSnf  = g('v2-bm-snf')||9.0;
+  const v3SmFat  = g('v3-sm-fat')||0.1;
+  const v3SmSnf  = g('v3-sm-snf')||8.5;
+
+  const V2_MAX_CM=480, V2_MAX_BM=160, V3_MAX_SM=2000;
+
+  // ── How much cream does V1 CM produce when fully skimmed? ──
+  // Fat balance: vol*cmFat = cream_kg*creamFat + sm_vol*smFat
+  // Mass balance: vol*1.028 = cream_kg + sm_vol*1.032
+  const v1CmMass = v1CmVol * 1.028;
+  const A = creamFatFrac - smFatFrac/1.032;
+  const B = v1CmVol*(v1CmFat/100) - v1CmMass*smFatFrac/1.032;
+  const creamFromV1 = v1CmVol>0 ? Math.max(0, B/A) : 0;
+  const smFromV1    = v1CmVol>0 ? Math.max(0, (v1CmMass - creamFromV1)/1.032) : 0;
+
+  // ── Calculate milk needed for each product ──
+  let bmNeeded=0, smNeeded=0, creamNeeded=0;
+  const breakdown=[];
+
+  PRODUCTS.forEach(p => {
+    const vol = STATE.batchVol[p.id]||0;
+    if(vol===0) return;
+    let bm=0, cm=0, sm=0, cream=0;
+
+    if(p.milkBase==='BM_SM') {
+      // BM all available (V1 + whatever ordered from V2), SM fills rest
+      const totalBmAvail = v1BmVol; // before V2 order — shows baseline
+      bm = Math.min(totalBmAvail, vol);
+      sm = vol - bm;
+      const fatFromMilk = bm*(v1BmFat/100) + sm*(v3SmFat/100);
+      const fatNeeded   = vol*1.032*(p.fat/100);
+      cream = Math.max(0, (fatNeeded-fatFromMilk)/creamFatFrac);
+      bmNeeded+=bm; smNeeded+=sm; creamNeeded+=cream;
+    } else if(p.milkBase==='CM') {
+      cm=vol;
+    } else if(p.milkBase==='SM') {
+      sm=vol; smNeeded+=sm;
+    } else if(p.milkBase==='CM_SM') {
+      // Khoya STD: blend CM+SM
+      const b = (vol*(p.fat/100 - smFatFrac)) / ((v2CmFat/100) - smFatFrac);
+      cm=Math.min(vol,b); sm=vol-cm; smNeeded+=sm;
+    }
+    breakdown.push({p, vol, bm, cm, sm, cream});
+  });
+
+  // ── BM gap ──
+  const bmGap = Math.max(0, bmNeeded - v1BmVol);
+  const v2BmOrder = Math.min(bmGap, V2_MAX_BM);
+
+  // ── Cream deficit → extra CM from V2 ──
+  const creamDeficit = Math.max(0, creamNeeded - creamFromV1);
+  let v2CmForCream = 0;
+  let smFromV2Cm = 0;
+  if(creamDeficit > 0) {
+    const v2CmMassPerL = 1.028;
+    const Av2 = creamFatFrac - smFatFrac/1.032;
+    const Bv2PerL = (v2CmFat/100) - v2CmMassPerL*smFatFrac/1.032;
+    const creamPerLv2 = Bv2PerL / Av2; // kg cream per litre CM skimmed
+    v2CmForCream = Math.ceil(creamDeficit / creamPerLv2 / 10)*10; // round up to 10L
+    v2CmForCream = Math.min(v2CmForCream, V2_MAX_CM);
+    smFromV2Cm = Math.max(0, (v2CmForCream*1.028 - v2CmForCream*Bv2PerL/Av2)/1.032);
+  }
+
+  // ── SM needed from V3 ──
+  const totalSmFromSeparator = smFromV1 + smFromV2Cm;
+  const v3SmOrder = Math.max(0, Math.ceil((smNeeded - totalSmFromSeparator)/50)*50);
+  const v3SmOrderCapped = Math.min(v3SmOrder, V3_MAX_SM);
+
+  // ── Total cream available after ordering ──
+  const totalCreamFromV2 = v2CmForCream > 0 ? (()=>{
+    const Av2=creamFatFrac-smFatFrac/1.032;
+    const Bv2=v2CmForCream*(v2CmFat/100)-(v2CmForCream*1.028)*smFatFrac/1.032;
+    return Math.max(0, Bv2/Av2);
+  })() : 0;
+  const totalCreamAvail = creamFromV1 + totalCreamFromV2;
+  const creamOk = totalCreamAvail >= creamNeeded;
+  const bmOk    = (v1BmVol + v2BmOrder) >= bmNeeded;
+  const smOk    = (totalSmFromSeparator + v3SmOrderCapped) >= smNeeded;
+
+  // ── Render recommendation ──
+  const block = document.getElementById('order-recommendation-block');
+  if(!block) return;
+
+  // Store for use in Step 3 auto-fill
+  STATE.milkOrder = {
+    v1CmVol, v1BmVol, v1CmFat, v1BmFat, v1Snf,
+    creamFromV1, smFromV1,
+    v2BmOrder, v2CmForCream, totalCreamFromV2, smFromV2Cm,
+    v3SmOrder:v3SmOrderCapped,
+    totalCreamAvail, creamNeeded,
+    v2CmFat, v2BmFat, v2CmSnf, v2BmSnf, v3SmFat, v3SmSnf,
+    creamFatPct, smFatAfter
+  };
+
+  const statusBadge = (ok,label) =>
+    `<span style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:${ok?'#E8F5E9':'#FFEBEE'};color:${ok?'#2E7D32':'var(--red)'};">${ok?'✓':'⚠'} ${label}</span>`;
+
+  let html = `<div class="need-card" style="margin-bottom:10px;">
+    <div class="need-title">🛒 Milk Order Recommendation</div>`;
+
+  // Separator output from V1
+  html += `<div style="background:rgba(255,255,255,.6);border-radius:8px;padding:10px;margin-bottom:10px;">
+    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">🫙 V1 CM Separator Output (skim all ${v1CmVol}L)</div>
+    <div class="need-row"><span class="need-label">Cream produced</span><span class="need-value">${creamFromV1.toFixed(1)} kg</span></div>
+    <div class="need-row"><span class="need-label">SM produced</span><span class="need-value">${smFromV1.toFixed(0)} L</span></div>
+    <div class="need-row" style="border:none;"><span class="need-label">Cream needed (all paneer)</span>
+      <span class="need-value" style="color:${creamOk?'inherit':'var(--red)'};">${creamNeeded.toFixed(1)} kg ${statusBadge(creamFromV1>=creamNeeded,'V1 only')}</span>
+    </div>
+  </div>`;
+
+  // Order table
+  html += `<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px;">ORDER FROM VENDORS</div>`;
+
+  // V2 BM
+  html += `<div class="need-row">
+    <div><span class="need-label">V2 — Buffalo Milk</span><div style="font-size:10px;color:var(--muted);">fat deficit: need ${bmNeeded}L, V1 gives ${v1BmVol}L</div></div>
+    <span class="need-value ${bmOk?'':'style=\"color:var(--red)\"'}">${v2BmOrder}L ${statusBadge(bmOk,'OK')}</span>
+  </div>`;
+
+  // V2 CM (for cream)
+  if(v2CmForCream > 0) {
+    html += `<div class="need-row">
+      <div><span class="need-label">V2 — Cow Milk (for cream)</span>
+        <div style="font-size:10px;color:var(--muted);">deficit ${creamDeficit.toFixed(1)}kg cream → skim ${v2CmForCream}L CM → ${totalCreamFromV2.toFixed(1)}kg cream + ${smFromV2Cm.toFixed(0)}L SM</div>
+      </div>
+      <span class="need-value">${v2CmForCream}L</span>
+    </div>`;
+  } else {
+    html += `<div class="need-row">
+      <span class="need-label">V2 — Cow Milk</span>
+      <span class="need-value" style="color:var(--green2);">Not needed ✓</span>
+    </div>`;
+  }
+
+  // V3 SM
+  html += `<div class="need-row" style="border:none;">
+    <div><span class="need-label">V3 — Skim Milk</span>
+      <div style="font-size:10px;color:var(--muted);">SM needed ${smNeeded.toFixed(0)}L · From separator ${totalSmFromSeparator.toFixed(0)}L · Gap ${Math.max(0,smNeeded-totalSmFromSeparator).toFixed(0)}L</div>
+    </div>
+    <span class="need-value">${v3SmOrderCapped}L ${statusBadge(smOk,'OK')}</span>
+  </div>`;
+
+  // Total cost indicator
+  const totalMilk = v1CmVol+v1BmVol+v2BmOrder+v2CmForCream+v3SmOrderCapped;
+  html += `<div class="need-total" style="margin-top:10px;">
+    <div>
+      <div class="t-label">Total milk today</div>
+      <div style="font-size:11px;opacity:.85;">V1: ${v1CmVol+v1BmVol}L · V2: ${v2BmOrder+v2CmForCream}L · V3: ${v3SmOrderCapped}L</div>
+    </div>
+    <div class="t-value">${totalMilk}L</div>
+  </div>`;
+
+  html += `</div>`;
+
+  // WhatsApp-ready order message button
+  html += `<button onclick="copyMilkOrder()" class="btn btn-wa" style="width:100%;margin-bottom:6px;">📲 Copy Milk Order for WhatsApp</button>`;
+
+  block.innerHTML = html;
+
+  // Auto-fill milk input fields in Step 3
+  setTimeout(() => {
+    const sv = (id, val) => { const el=document.getElementById(id); if(el&&val) el.value=val; };
+    sv('bm1-vol', v1BmVol);
+    sv('bm1-fat', v1BmFat);
+    sv('bm1-snf', v1Snf);
+    sv('bm2-vol', v2BmOrder);
+    sv('bm2-fat', v2BmFat||v1BmFat);
+    sv('bm2-snf', v2BmSnf||v1Snf);
+    sv('cm1-vol', v1CmVol);
+    sv('cm1-fat', v1CmFat);
+    sv('cm1-snf', v1Snf);
+    sv('cm2-vol', v2CmForCream);
+    sv('cm2-fat', v2CmFat||4.0);
+    sv('cm2-snf', v2CmSnf||8.5);
+    sv('sm-vol',  v3SmOrderCapped);
+    sv('sm-fat',  v3SmFat||0.1);
+    sv('sm-snf',  v3SmSnf||8.5);
+    sv('v4-cream-fat', creamFatPct);
+    // Separator section
+    sv('cm-to-skim', v1CmVol+v2CmForCream);
+    sv('cm-skim-fat', ((v1CmVol*v1CmFat + v2CmForCream*v2CmFat)/(v1CmVol+v2CmForCream||1)).toFixed(1));
+    sv('cream-fat', creamFatPct);
+    sv('sm-fat-after', smFatAfter);
+    sv('cream-kg', totalCreamAvail.toFixed(2));
+    sv('sm-sep-vol', (smFromV1+smFromV2Cm).toFixed(0));
+    sv('sm-sep-snf', v1Snf);
+    if(typeof onMilkChange==='function') onMilkChange();
+  }, 200);
+}
+
+function copyMilkOrder() {
+  const o = STATE.milkOrder;
+  if(!o) { showToast('Calculate order first'); return; }
+  const date = new Date().toLocaleDateString('en-IN');
+  let msg = `*🥛 Gaavn Fresh — Milk Order*\n📅 ${date}\n\n`;
+  msg += `*Vendor 1* (natural supply):\n`;
+  msg += `CM: ${o.v1CmVol}L @ ${o.v1CmFat}% fat\n`;
+  msg += `BM: ${o.v1BmVol}L @ ${o.v1BmFat}% fat\n\n`;
+  if(o.v2BmOrder>0||o.v2CmForCream>0) {
+    msg += `*Vendor 2* (order):\n`;
+    if(o.v2BmOrder>0)     msg += `BM: ${o.v2BmOrder}L\n`;
+    if(o.v2CmForCream>0)  msg += `CM: ${o.v2CmForCream}L (for cream)\n`;
+    msg += `\n`;
+  }
+  msg += `*Vendor 3* (order):\n`;
+  msg += `SM: ${o.v3SmOrder}L\n\n`;
+  msg += `*Separator:* Skim ${o.v1CmVol+o.v2CmForCream}L CM\n`;
+  msg += `→ Cream: ${o.totalCreamAvail.toFixed(1)}kg · SM: ${(o.smFromV1+o.smFromV2Cm).toFixed(0)}L\n`;
+  msg += `\n_Gaavn Fresh Recipe Calculator_`;
+
+  navigator.clipboard.writeText(msg).catch(()=>{
+    const t=document.createElement('textarea'); t.value=msg;
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
+  });
+  showToast('✓ Milk order copied for WhatsApp');
 }
 
 // ══ CREAM SEPARATOR CALCULATOR ══
@@ -962,20 +1256,22 @@ async function logToSheet() {
 // ══ NAVIGATION ══
 let currentStep=1;
 function goStep(n) {
-  if(n===2) { STATE.pool=getMilkPool(); }
-  if(n===3) { STATE.pool=getMilkPool(); renderSchedule(); }
-  if(n===4) { STATE.pool=getMilkPool(); calculateAndRenderRecipes(); }
+  if(n===2) { calcMilkOrder(); }
+  if(n===3) { STATE.pool=getMilkPool(); }
+  if(n===4) { STATE.pool=getMilkPool(); renderSchedule(); }
+  if(n===5) { STATE.pool=getMilkPool(); calculateAndRenderRecipes(); }
   currentStep=n;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-step'+n).classList.add('active');
-  ['s1','s2','s3','s4'].forEach((id,i)=>{
+  ['s1','s2','s3','s4','s5'].forEach((id,i)=>{
     const b=document.getElementById(id);
+    if(!b) return;
     b.classList.remove('active','done');
     if(i+1===n) b.classList.add('active');
     else if(i+1<n) b.classList.add('done');
   });
   const bar=document.getElementById('bottom-bar');
-  if(n===4) {
+  if(n===5) {
     bar.innerHTML=`<button class="btn btn-secondary" onclick="prevStep()">← Back</button>
       <button class="btn btn-wa" onclick="copyAll()">📲 Copy All</button>`;
   } else {
@@ -990,7 +1286,7 @@ function nextStep() {
     const hasAny=PRODUCTS.some(p=>(STATE.demand[p.id]||0)>0||(STATE.stock[p.id]||0)>0);
     if(!hasAny){showToast('Enter at least one product demand');return;}
   }
-  goStep(Math.min(4,currentStep+1));
+  goStep(Math.min(5,currentStep+1));
 }
 function prevStep(){goStep(Math.max(1,currentStep-1));}
 
