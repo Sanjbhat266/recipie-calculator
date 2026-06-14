@@ -120,6 +120,11 @@
 
   #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;z-index:999;white-space:nowrap;}
   #toast.show{opacity:1;}
+  .step-banner{background:var(--green2);color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.6;}
+  .step-banner .sb-num{font-size:22px;font-weight:700;opacity:.5;float:right;margin-top:-2px;}
+  .step-banner .sb-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+  .step-banner .sb-sub{font-size:12px;opacity:.85;}
+  .step-banner .sb-action{margin-top:8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:6px;padding:5px 10px;display:inline-block;}
   .chip{display:inline-block;background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--muted);margin:2px;}
   .highlight{color:var(--amber);font-weight:700;}
 </style>
@@ -133,18 +138,25 @@
 </div>
 
 <div class="stepper">
-  <button class="step-btn active" id="s1" onclick="goStep(1)">1·Demand</button>
-  <button class="step-btn" id="s2" onclick="goStep(2)">2·Order</button>
-  <button class="step-btn" id="s3" onclick="goStep(3)">3·Milk</button>
-  <button class="step-btn" id="s4" onclick="goStep(4)">4·Schedule</button>
-  <button class="step-btn" id="s5" onclick="goStep(5)">5·Recipe</button>
+  <button class="step-btn active" id="s1" onclick="goStep(1)">1 · What to make</button>
+  <button class="step-btn" id="s2" onclick="goStep(2)">2 · Order milk</button>
+  <button class="step-btn" id="s3" onclick="goStep(3)">3 · Milk received</button>
+  <button class="step-btn" id="s4" onclick="goStep(4)">4 · Schedule</button>
+  <button class="step-btn" id="s5" onclick="goStep(5)">5 · Recipe</button>
 </div>
+<div id="step-guide" style="background:rgba(255,255,255,.1);margin:0;padding:8px 16px 12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.5;"></div>
 
 <!-- ══ STEP 1: DEMAND & STOCK ══ -->
 <div class="screen active" id="screen-step1">
+  <div class="step-banner">
+    <span class="sb-num">1</span>
+    <div class="sb-title">What are you making tomorrow?</div>
+    <div class="sb-sub">Enter today's closing stock and tomorrow's customer orders. The app will calculate how much milk to order from vendors.</div>
+    <span class="sb-action">👇 Fill stock + orders below, then tap Next</span>
+  </div>
 
   <div class="card">
-    <div class="card-title">⚙️ Recipe Parameters <span style="font-weight:400;text-transform:none;letter-spacing:0;font-size:11px;color:var(--muted)">(editable)</span></div>
+    <div class="card-title">⚙️ Recipe settings — change only if needed</div>
     <div class="snf-row">
       <div><div class="snf-label">🐃 BM ratio in paneer</div><div class="snf-sub">BM as % of (BM+SM) — data avg 20%</div></div>
       <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="bm-ratio" value="20" type="number" step="1" min="5" max="50" oninput="calcMilkNeeded()"><span style="font-size:11px;color:var(--muted);">%</span></div>
@@ -160,7 +172,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">📦 Closing Stock & Tomorrow's Demand</div>
+    <div class="card-title">📦 What is your stock today, and how much do customers need tomorrow?</div>
     <div style="display:grid;grid-template-columns:auto 1fr 80px 80px;gap:6px;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--border);">
       <div></div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Product</div>
       <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;text-align:center;">Stock<br>kg</div>
@@ -175,10 +187,16 @@
 
 <!-- ══ STEP 2: MILK ORDER ══ -->
 <div class="screen" id="screen-step2">
+  <div class="step-banner">
+    <span class="sb-num">2</span>
+    <div class="sb-title">Order milk from vendors</div>
+    <div class="sb-sub">Enter V1's expected quantity and today's fat/SNF reading. The app calculates exactly how much to order from V2 (Yogesh) and V3 (MM). Call vendors before 8 AM.</div>
+    <span class="sb-action">👇 Enter V1 readings → see order quantities below</span>
+  </div>
 
   <div class="card">
-    <div class="card-title">🏠 Vendor 1 — Natural Supply (fixed)</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">V1 supplies whatever the village produces — not on order. Enter expected today based on season/history.</div>
+    <div class="card-title">🏠 Vendor 1 (Dipak) — village milk, arrives automatically</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">You don't order from V1 — they deliver whatever the village produces. Enter today's expected quantity and quality (check yesterday's reading as a reference).</div>
     <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Morning (9:30 AM)</div>
     <div class="field-row c3">
       <div class="field"><label>CM (L)</label><input type="number" id="v1-cm-morn" placeholder="84" min="0" oninput="calcMilkOrder()"></div>
@@ -199,8 +217,8 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🏪 Vendor 2 — On Order (CM + BM)</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Max capacity: 480L CM · 160L BM. Only order CM if cream is short — SM is cheaper.</div>
+    <div class="card-title">🏪 Vendor 2 (Yogesh) — call to order BM + CM if needed</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">The app will tell you exactly how much BM and CM to order below. Max he can supply: 480L CM · 160L BM.</div>
     <div class="field-row c2">
       <div class="field"><label>CM fat %</label><input type="number" id="v2-cm-fat" placeholder="4.0" step="0.1" value="4.0" min="0" max="10" oninput="calcMilkOrder()"></div>
       <div class="field"><label>BM fat %</label><input type="number" id="v2-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
@@ -212,8 +230,8 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🥛 Vendor 3 — Skim Milk (on order)</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Max capacity: 2000L. Fat ~0.1%. Order only what's needed after accounting for SM from separator.</div>
+    <div class="card-title">🥛 Vendor 3 (MM) — call to order Skim Milk</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">The app calculates how much SM to order after accounting for SM produced by the cream separator.</div>
     <div class="field-row c2">
       <div class="field"><label>SM fat %</label><input type="number" id="v3-sm-fat" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcMilkOrder()"></div>
       <div class="field"><label>SM SNF %</label><input type="number" id="v3-sm-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
@@ -221,7 +239,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🫙 Cream Separator Parameters</div>
+    <div class="card-title">🫙 Cream separator — typical output settings</div>
     <div class="field-row c2">
       <div class="field"><label>Cream fat % output</label><input type="number" id="v4-cream-fat" placeholder="60" step="1" value="60" min="0" max="100" oninput="calcMilkOrder()"></div>
       <div class="field"><label>SM fat % after skim</label><input type="number" id="v4-sm-fat-after" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcMilkOrder()"></div>
@@ -235,9 +253,15 @@
 <!-- ══ STEP 3: MILK INPUT (was Step 2) ══ -->
 <!-- ══ STEP 3: MILK INPUT ══ -->
 <div class="screen" id="screen-step3">
+  <div class="step-banner">
+    <span class="sb-num">3</span>
+    <div class="sb-title">Milk received — confirm actuals</div>
+    <div class="sb-sub">Fields are pre-filled from your order. Correct anything that arrived differently — different quantity, fat% or SNF% than expected. This gives the accurate recipe.</div>
+    <span class="sb-action">👇 Check and correct actual quantities received</span>
+  </div>
 
   <div class="card">
-    <div class="card-title">🐃 Buffalo Milk (BM)</div>
+    <div class="card-title">🐃 Buffalo Milk received — V1 morning + V2</div>
     <div class="vendor-block">
       <div class="vendor-header">
         <span class="vtag bm">V1</span><span class="vname">Vendor 1</span>
@@ -263,7 +287,7 @@
   </div>
 
   <div class="card">
-    <div class="card-title">🐄 Cow Milk (CM)</div>
+    <div class="card-title">🐄 Cow Milk received — V1 morning + V2 (if ordered)</div>
     <div class="vendor-block">
       <div class="vendor-header">
         <span class="vtag cm">V1</span><span class="vname">Vendor 1</span>
@@ -343,6 +367,11 @@
 
 <!-- ══ STEP 4: PRODUCTION SCHEDULE ══ -->
 <div class="screen" id="screen-step4">
+  <div class="step-banner">
+    <span class="sb-num">4</span>
+    <div class="sb-title">Production schedule</div>
+    <div class="sb-sub">Paneer starts after 9:30 AM (V1 BM in hand). Curd and Khoya start after 1 PM when all milk is received.</div>
+  </div>
   <div class="card">
     <div class="card-title">🕐 Production Schedule by Milk Arrival</div>
     <div id="schedule-block"></div>
@@ -355,6 +384,12 @@
 
 <!-- ══ STEP 5: RECIPE OUTPUT ══ -->
 <div class="screen" id="screen-step5">
+  <div class="step-banner">
+    <span class="sb-num">5</span>
+    <div class="sb-title">Recipe — send to production group</div>
+    <div class="sb-sub">Tap Copy All to send the full recipe to the plant WhatsApp group. Each product can be copied individually too.</div>
+    <span class="sb-action">📲 Tap Copy All → paste in WhatsApp</span>
+  </div>
   <div id="recipe-output"></div>
 </div>
 
@@ -569,6 +604,9 @@ function calcMilkOrder() {
   const smFromV1    = v1CmVol>0 ? Math.max(0, (v1CmMass - creamFromV1)/1.032) : 0;
 
   // ── Calculate milk needed for each product ──
+  // If Step 1 hasn't been filled yet, derive batch volumes from demand inputs directly
+  if(Object.keys(STATE.batchVol||{}).length === 0) calcMilkNeeded();
+
   let bmNeeded=0, smNeeded=0, creamNeeded=0;
   const breakdown=[];
 
@@ -583,8 +621,12 @@ function calcMilkOrder() {
       const bmRatio = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
       bm = vol * bmRatio;
       sm = vol * (1 - bmRatio);
-      // Blended BM fat (V1 + V2 combined)
-      const blendedBmFat = (v1BmVol*v1BmFat + (bm-v1BmVol)*v2BmFat) / bm;
+      // Blended BM fat (V1 natural + V2 ordered to fill gap)
+      const bmFromV1 = Math.min(v1BmVol, bm);
+      const bmFromV2 = Math.max(0, bm - bmFromV1);
+      const blendedBmFat = bm > 0
+        ? (bmFromV1*v1BmFat + bmFromV2*(v2BmFat||v1BmFat)) / bm
+        : (v1BmFat||6.5);
       const fatFromMilk = bm*(blendedBmFat/100) + sm*(v3SmFat/100);
       const fatNeeded   = vol*1.032*(p.fat/100);
       cream = Math.max(0, (fatNeeded-fatFromMilk)/creamFatFrac);
@@ -602,6 +644,7 @@ function calcMilkOrder() {
   });
 
   // ── BM gap — V2 BM is ordered to reach the quality ratio target ──
+  const bmRatioPct = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
   const bmGap = Math.max(0, bmNeeded - v1BmVol);
   const v2BmOrder = Math.min(Math.ceil(bmGap/10)*10, V2_MAX_BM); // round up to 10L
 
@@ -654,7 +697,7 @@ function calcMilkOrder() {
     `<span style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:${ok?'#E8F5E9':'#FFEBEE'};color:${ok?'#2E7D32':'var(--red)'};">${ok?'✓':'⚠'} ${label}</span>`;
 
   let html = `<div class="need-card" style="margin-bottom:10px;">
-    <div class="need-title">🛒 Milk Order Recommendation</div>`;
+    <div class="need-title">📞 Call vendors with this order</div>`;
 
   // Separator output from V1
   html += `<div style="background:rgba(255,255,255,.6);border-radius:8px;padding:10px;margin-bottom:10px;">
@@ -671,7 +714,7 @@ function calcMilkOrder() {
 
   // V2 BM
   html += `<div class="need-row">
-    <div><span class="need-label">V2 — Buffalo Milk</span><div style="font-size:10px;color:var(--muted);">fat deficit: need ${bmNeeded}L, V1 gives ${v1BmVol}L</div></div>
+    <div><span class="need-label">V2 — Buffalo Milk</span><div style="font-size:10px;color:var(--muted);">Quality ratio ${Math.round(bmRatioPct*100)}% of batch · Need ${bmNeeded.toFixed(0)}L total · V1 gives ${v1BmVol}L</div></div>
     <span class="need-value ${bmOk?'':'style=\"color:var(--red)\"'}">${v2BmOrder}L ${statusBadge(bmOk,'OK')}</span>
   </div>`;
 
@@ -1291,6 +1334,15 @@ async function logToSheet() {
 // ══ NAVIGATION ══
 let currentStep=1;
 function goStep(n) {
+  const guides = {
+    1: '📋 Enter closing stock and tomorrow\'s orders for each product. The app will calculate how much milk to order.',
+    2: '📞 Call vendors with these quantities. V1 is fixed supply — V2 and V3 are on order. Enter today\'s expected V1 fat & SNF readings.',
+    3: '🥛 Milk is now in the plant. Enter actual quantities and quality received from each vendor. The app auto-fills from Step 2 — just correct anything different.',
+    4: '🕐 Review the production schedule based on when milk arrived.',
+    5: '🧀 Final recipe with exact quantities. Copy and send to production WhatsApp group.'
+  };
+  const guideEl = document.getElementById('step-guide');
+  if(guideEl) guideEl.textContent = guides[n] || '';
   if(n===2) { calcMilkOrder(); }
   if(n===3) { STATE.pool=getMilkPool(); }
   if(n===4) { STATE.pool=getMilkPool(); renderSchedule(); }
@@ -1306,13 +1358,19 @@ function goStep(n) {
     else if(i+1<n) b.classList.add('done');
   });
   const bar=document.getElementById('bottom-bar');
+  const nextLabels = {
+    1: 'See milk order →',
+    2: 'Enter actual milk →',
+    3: 'See schedule →',
+    4: 'Get recipe →'
+  };
   if(n===5) {
     bar.innerHTML=`<button class="btn btn-secondary" onclick="prevStep()">← Back</button>
-      <button class="btn btn-wa" onclick="copyAll()">📲 Copy All</button>`;
+      <button class="btn btn-wa" onclick="copyAll()">📲 Copy All for WhatsApp</button>`;
   } else {
     bar.innerHTML=`
       <button class="btn btn-secondary" id="btn-back" onclick="prevStep()" style="display:${n>1?'block':'none'}">← Back</button>
-      <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Next →</button>`;
+      <button class="btn btn-primary" id="btn-next" onclick="nextStep()">${nextLabels[n]||'Next →'}</button>`;
   }
   window.scrollTo(0,0);
 }
