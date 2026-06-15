@@ -145,8 +145,7 @@
   <button class="step-btn active" id="s1" onclick="goStep(1)">1 · What to make</button>
   <button class="step-btn" id="s2" onclick="goStep(2)">2 · Order milk</button>
   <button class="step-btn" id="s3" onclick="goStep(3)">3 · Milk received</button>
-  <button class="step-btn" id="s4" onclick="goStep(4)">4 · Schedule</button>
-  <button class="step-btn" id="s5" onclick="goStep(5)">5 · Recipe</button>
+  <button class="step-btn" id="s4" onclick="goStep(4)">4 · Recipe</button>
 </div>
 <div id="step-guide" style="background:rgba(255,255,255,.1);margin:0;padding:8px 16px 12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.5;"></div>
 
@@ -167,7 +166,7 @@
     </div>
     <div class="snf-row">
       <div><div class="snf-label">🥄 Lite Curd SNF target</div><div class="snf-sub">SM base · SMP addition</div></div>
-      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="snf-lite-curd" value="11.5" type="number" step="0.1" min="8" max="15"><span style="font-size:11px;color:var(--muted);">%</span></div>
+      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="snf-lite-curd" value="11.0" type="number" step="0.1" min="8" max="15"><span style="font-size:11px;color:var(--muted);">%</span></div>
     </div>
     <div class="snf-row">
       <div><div class="snf-label">🍶 Fresh Curd SNF target</div><div class="snf-sub">CM base · SMP addition</div></div>
@@ -393,7 +392,7 @@
 </div>
 
 <!-- ══ STEP 5: RECIPE OUTPUT ══ -->
-<div class="screen" id="screen-step5">
+<div class="screen" id="screen-step4">
   <div class="step-banner">
     <span class="sb-num">5</span>
     <div class="sb-title">Recipe — send to production group</div>
@@ -471,33 +470,49 @@
 const TODAY_STR = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
 document.getElementById('hdr-date').textContent = TODAY_STR;
 
-// Yield: kg product per litre of milk in vat
+// Yield: kg product per litre of (BM+SM) milk
+// Paneer 15.2% validated from 30 days May data; curd ~95% of SM; others estimated
 const YIELD = {
-  paneer_lite:0.10, paneer_med:0.115, paneer_malai:0.16,
-  khoya_cm:0.22, khoya_std:0.18,
-  curd_lite:0.95, curd_fresh:0.95,
-  lassi:1.2, chaas:1.3
+  paneer_lite:0.120, paneer_med:0.152, paneer_malai:0.180,
+  khoya_cm:0.220, khoya_std:0.180,
+  curd_lite:0.950, curd_fresh:0.950,
+  lassi:1.200, chaas:1.300
 };
 
 // Products master
 const PRODUCTS = [
-  {id:'paneer_lite',  name:'Lite Paneer',   icon:'🥛', fat:0.75, milkBase:'BM_SM', group:'paneer',
+  // Medium Paneer: target 1.7% fat in vat (BM+SM+cream+water)
+  // Cream (62% fat) added to balance if blended BM+SM fat < 1.7%
+  // If blended fat >= 1.5% (good milk day) → only 0.2% top-up with cream
+  // Ingredients per litre of (BM+SM): AA=1ml, Water=0.2L, PS=0.42g, CaCl2=0.6g
+  // Yield: 15.2% of (BM+SM) milk
+  {id:'paneer_med',   name:'Medium Paneer', icon:'🧀', fat:1.70, targetFat:1.70, goodMilkFat:1.50,
+   milkBase:'BM_SM', group:'paneer', yieldPct:15.2,
    coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
-  {id:'paneer_med',   name:'Medium Paneer', icon:'🧀', fat:1.70, milkBase:'BM_SM', group:'paneer',
+  {id:'paneer_lite',  name:'Lite Paneer',   icon:'🥛', fat:0.75, targetFat:0.75, goodMilkFat:0.75,
+   milkBase:'BM_SM', group:'paneer', yieldPct:12.0,
    coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
-  {id:'paneer_malai', name:'Malai Paneer',  icon:'🧈', fat:4.5,  milkBase:'BM_SM', group:'paneer',
+  {id:'paneer_malai', name:'Malai Paneer',  icon:'🧈', fat:4.50, targetFat:4.50, goodMilkFat:4.50,
+   milkBase:'BM_SM', group:'paneer', yieldPct:18.0,
    coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
-  {id:'khoya_cm',     name:'Khoya CM',      icon:'🍮', fat:3.0,  milkBase:'CM',    group:'khoya',  coag:[]},
-  {id:'khoya_std',    name:'Khoya STD',     icon:'🟤', fat:1.5,  milkBase:'CM_SM', group:'khoya',  coag:[]},
-  {id:'curd_lite',    name:'Lite Curd',     icon:'🥄', fat:0.1,  milkBase:'SM',    group:'curd',
+  // Khoya: just milk reduction, no additives tracked here
+  {id:'khoya_cm',     name:'Khoya CM',      icon:'🍮', fat:3.0, milkBase:'CM', group:'khoya', yieldPct:22.0, coag:[]},
+  {id:'khoya_std',    name:'Khoya STD',     icon:'🟤', fat:1.5, milkBase:'CM_SM', group:'khoya', yieldPct:18.0, coag:[]},
+  // Lite Curd: SM standardised to SNF 11% + fat 0.5% = TS 11.5%
+  // SMP added to bring SM SNF to 11%. Yield ~95% of SM
+  {id:'curd_lite',    name:'Lite Curd',     icon:'🥄', fat:0.1, milkBase:'SM', group:'curd', yieldPct:95.0,
+   targetSnf:11.0, targetTS:11.5,
    coag:[{n:'Culture',per:2.0,u:'g/L'},{n:'Binder',per:0.1,u:'g/L'},{n:'CaCl₂',per:0.3,u:'g/L'}]},
-  {id:'curd_fresh',   name:'Fresh Curd',    icon:'🍶', fat:3.0,  milkBase:'CM',    group:'curd',
+  {id:'curd_fresh',   name:'Fresh Curd',    icon:'🍶', fat:3.0, milkBase:'CM', group:'curd', yieldPct:95.0,
    coag:[{n:'Culture',per:2.0,u:'g/L'}]},
-  {id:'lassi',        name:'Lassi',         icon:'🥤', fat:3.0,  milkBase:'CM',    group:'lassi', fromCurd:'curd_fresh',
-   coag:[{n:'Sugar',per:80,u:'g/L'},{n:'Water',per:0.3,u:'L/L'}]},
-  {id:'chaas',        name:'Chaas',         icon:'🧉', fat:3.0,  milkBase:'CM',    group:'chaas', fromCurd:'curd_fresh',
-   coag:[{n:'Salt',per:5,u:'g/L'},{n:'Water',per:0.5,u:'L/L'},{n:'Jeera',per:1,u:'g/L'}]},
+  {id:'lassi',        name:'Lassi',         icon:'🥤', fat:3.0, milkBase:'CM', group:'lassi', yieldPct:120.0,
+   fromCurd:'curd_fresh', coag:[{n:'Sugar',per:80,u:'g/L'},{n:'Water',per:0.3,u:'L/L'}]},
+  {id:'chaas',        name:'Chaas',         icon:'🧉', fat:3.0, milkBase:'CM', group:'chaas', yieldPct:130.0,
+   fromCurd:'curd_fresh', coag:[{n:'Salt',per:5,u:'g/L'},{n:'Water',per:0.5,u:'L/L'},{n:'Jeera',per:1,u:'g/L'}]},
 ];
+
+// Cream fat% for balancing (per user: 62%)
+const CREAM_FAT_DEFAULT = 62;
 
 // Arrival windows
 const ARRIVAL = {
@@ -718,7 +733,11 @@ function calcMilkOrder() {
   const v2BmOverride = parseFloat(document.getElementById('v2-bm-expected')?.value);
   const v2BmOrder = !isNaN(v2BmOverride) && v2BmOverride >= 0 ? v2BmOverride : bmCalc;
 
-  // ── Cream deficit → extra CM from V2 ──
+  // ── How much cream is needed and how much CM to skim ──
+  // Cream fat = 62% (plant standard)
+  // Back-calculate CM needed to produce required cream
+  // cream_kg = cm_vol * (cm_fat - sm_fat) / (cream_fat - sm_fat)
+  // cm_vol_for_cream = creamNeeded / ((cm_fat - sm_fat) / (cream_fat - sm_fat))
   const creamDeficit = Math.max(0, creamNeeded - creamFromV1);
   let v2CmForCream = 0;
   let smFromV2Cm = 0;
@@ -750,6 +769,9 @@ function calcMilkOrder() {
   const creamOk = totalCreamAvail >= creamNeeded;
   const bmOk    = (v1BmVol + v2BmOrder) >= bmNeeded;
   const smOk    = (totalSmFromSeparator + v3SmOrderCapped) >= smNeeded;
+
+  // ── Total CM to skim = V1 CM + V2 CM for cream ──
+  STATE.totalCmToSkim = v1CmVol + v2CmForCream;
 
   // ── Render recommendation ──
   const block = document.getElementById('order-recommendation-block');
@@ -857,6 +879,9 @@ function calcMilkOrder() {
     sv('v4-cream-fat', creamFatPct);
     // Separator section
     sv('cm-to-skim', v1CmVol+v2CmForCream);
+    // Also show how much cream is needed vs available in a summary
+    const creamNeededEl = document.getElementById('cream-needed-summary');
+    if(creamNeededEl) creamNeededEl.textContent = 'Cream needed: '+creamNeeded.toFixed(1)+'kg · V1 CM gives: '+creamFromV1.toFixed(1)+'kg'+(v2CmForCream>0?' · Skim '+Math.round(v2CmForCream)+'L extra from V2':'');
     const blendedSkimFat = (v1CmVol+v2CmForCream) > 0
       ? (v1CmVol*v1CmFat + v2CmForCream*(g('v2-cm-fat')||4.0)) / (v1CmVol+v2CmForCream)
       : 4.0;
@@ -1148,16 +1173,27 @@ function calculateAndRenderRecipes() {
     }
 
     if(prod.milkBase==='BM_SM') {
-      // Paneer: BM is quality input at fixed ratio (~20%), SM fills rest, cream balances fat
-      const creamFatPct = parseFloat(document.getElementById('cream-fat')?.value)||60;
+      // PANEER RECIPE (validated from May 2026 data):
+      // BM=20% of milk, SM=80%, SM fat fixed 0.1%
+      // Blended fat = (BM×BM_fat + SM×0.001) / total_milk
+      // Cream (62%) added to bring vat to target fat%
+      // If blended fat >= 1.5% (good milk): only 0.2% top-up needed
+      const creamFatPct = CREAM_FAT_DEFAULT; // 62%
       const bmRatioPct  = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
-      bmV = vol * bmRatioPct;            // BM fixed at quality ratio
-      smV = vol - bmV;                   // SM fills the rest
-      // Fat balance: cream makes up deficit after BM + SM
-      const fatFromMilk = bmV*(pool.bmFat/100) + smV*(pool.smFat||0.001);
+      bmV = vol * bmRatioPct;
+      smV = vol - bmV;
+      const smFatFixed  = 0.001;
+      const blendedFat  = (bmV*(pool.bmFat/100) + smV*smFatFixed) / vol;
+      const fatFromMilk = bmV*(pool.bmFat/100) + smV*smFatFixed;
       const fatNeeded   = vol * 1.032 * (prod.fat/100);
       creamKg = Math.max(0, (fatNeeded - fatFromMilk) / (creamFatPct/100));
       bmUsed+=bmV; smUsed+=smV;
+      const blendedPct  = (blendedFat*100).toFixed(2);
+      const goodMilkThreshold = prod.goodMilkFat || 1.5;
+      if(blendedFat*100 < goodMilkThreshold)
+        warnings.push(`Low milk fat day — blended ${blendedPct}%. Cream ${creamKg.toFixed(2)}kg needed to reach ${prod.fat}%`);
+      else
+        warnings.push(`✓ Good milk — blended ${blendedPct}%. Adding ${creamKg.toFixed(2)}kg cream as top-up to ${prod.fat}%`);
       if(bmV > pool.bmVol) warnings.push(`Need ${bmV.toFixed(0)}L BM, only ${pool.bmVol.toFixed(0)}L available — order more from V2`);
       if(smV > pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol.toFixed(0)}L available`);
       if(creamKg > pool.creamKg) warnings.push(`Need ${creamKg.toFixed(2)}kg cream, only ${pool.creamKg.toFixed(2)}kg available — skim more CM`);
@@ -1178,7 +1214,8 @@ function calculateAndRenderRecipes() {
     let milkSnf = 0;
     let milkDensity = 1.030;
     if(prod.id==='curd_lite') {
-      targetSnf=snfLiteCurd; milkSnf=pool.smSnf||8.5; milkDensity=1.032;
+      // TS = 11.5% = fat(0.5%) + SNF(11%). Add SMP to bring SNF from milk level to 11%.
+      targetSnf = prod.targetSnf || 11.0; milkSnf=pool.smSnf||8.5; milkDensity=1.032;
     } else if(prod.id==='curd_fresh') {
       targetSnf=snfFreshCurd; milkSnf=pool.cmSnf||8.5; milkDensity=1.028;
     } else if(prod.id==='khoya_cm') {
@@ -1423,12 +1460,11 @@ function goStep(n) {
   if(guideEl) guideEl.textContent = guides[n] || '';
   if(n===2) { calcMilkOrder(); }
   if(n===3) { STATE.pool=getMilkPool(); }
-  if(n===4) { STATE.pool=getMilkPool(); renderSchedule(); }
-  if(n===5) { STATE.pool=getMilkPool(); calculateAndRenderRecipes(); }
+  if(n===4) { STATE.pool=getMilkPool(); calculateAndRenderRecipes(); }
   currentStep=n;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById('screen-step'+n).classList.add('active');
-  ['s1','s2','s3','s4','s5'].forEach((id,i)=>{
+  ['s1','s2','s3','s4'].forEach((id,i)=>{
     const b=document.getElementById(id);
     if(!b) return;
     b.classList.remove('active','done');
@@ -1439,10 +1475,9 @@ function goStep(n) {
   const nextLabels = {
     1: 'See milk order →',
     2: 'Enter actual milk →',
-    3: 'See schedule →',
-    4: 'Get recipe →'
+    3: 'Get recipe →'
   };
-  if(n===5) {
+  if(n===4) {
     bar.innerHTML=`<button class="btn btn-secondary" onclick="prevStep()">← Back</button>
       <button class="btn btn-wa" onclick="copyAll()">📲 Copy All for WhatsApp</button>`;
   } else {
@@ -1457,7 +1492,7 @@ function nextStep() {
     const hasAny=PRODUCTS.some(p=>(STATE.demand[p.id]||0)>0||(STATE.stock[p.id]||0)>0);
     if(!hasAny){showToast('Enter at least one product demand');return;}
   }
-  goStep(Math.min(5,currentStep+1));
+  goStep(Math.min(4,currentStep+1));
 }
 function prevStep(){goStep(Math.max(1,currentStep-1));}
 
