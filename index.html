@@ -135,6 +135,10 @@
   <div class="header-logo">🧀</div>
   <div><div class="header-title">Recipe Calculator</div><div class="header-sub">Gaavn Fresh Dairy</div></div>
   <div class="header-date" id="hdr-date"></div>
+  <button onclick="toggleQuickMode()" id="quick-btn"
+    style="background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;margin-left:8px;white-space:nowrap;">
+    ⚡ Quick
+  </button>
 </div>
 
 <div class="stepper">
@@ -218,14 +222,20 @@
 
   <div class="card">
     <div class="card-title">🏪 Vendor 2 (Yogesh) — call to order BM + CM if needed</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">The app will tell you exactly how much BM and CM to order below. Max he can supply: 480L CM · 160L BM.</div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">App calculates quantities needed below. Enter fat/SNF for accurate recipe. Max: 480L CM · 160L BM.</div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Expected quantity (app-calculated — override if Yogesh confirms different)</div>
     <div class="field-row c2">
-      <div class="field"><label>CM fat %</label><input type="number" id="v2-cm-fat" placeholder="4.0" step="0.1" value="4.0" min="0" max="10" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>BM to order (L)</label><input type="number" id="v2-bm-expected" placeholder="auto" step="10" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM to order (L)</label><input type="number" id="v2-cm-expected" placeholder="auto" step="10" min="0" oninput="calcMilkOrder()"></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 6px;">Quality (today's reading)</div>
+    <div class="field-row c2">
       <div class="field"><label>BM fat %</label><input type="number" id="v2-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM fat %</label><input type="number" id="v2-cm-fat" placeholder="4.0" step="0.1" value="4.0" min="0" max="10" oninput="calcMilkOrder()"></div>
     </div>
     <div class="field-row c2">
-      <div class="field"><label>CM SNF %</label><input type="number" id="v2-cm-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
       <div class="field"><label>BM SNF %</label><input type="number" id="v2-bm-snf" placeholder="9.0" step="0.1" value="9.0" min="0" oninput="calcMilkOrder()"></div>
+      <div class="field"><label>CM SNF %</label><input type="number" id="v2-cm-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
     </div>
   </div>
 
@@ -397,6 +407,63 @@
   <button class="btn btn-secondary" id="btn-back" onclick="prevStep()" style="display:none">← Back</button>
   <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Next →</button>
 </div>
+<div id="quick-recipe-screen" style="display:none;padding:14px 14px 110px;">
+  <div class="step-banner" style="background:#1565C0;">
+    <div class="sb-title">⚡ Quick Recipe</div>
+    <div class="sb-sub">I know my milk quantities. Skip ordering — give me the recipe directly.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🥛 Milk in the plant today</div>
+    <div class="field-row c3">
+      <div class="field"><label>BM (L)</label><input type="number" id="qr-bm-vol" placeholder="120" min="0" oninput="calcQuickRecipe()"></div>
+      <div class="field"><label>BM fat %</label><input type="number" id="qr-bm-fat" placeholder="6.5" step="0.1" value="6.5" oninput="calcQuickRecipe()"></div>
+      <div class="field"><label>BM SNF %</label><input type="number" id="qr-bm-snf" placeholder="9.0" step="0.1" value="9.0" oninput="calcQuickRecipe()"></div>
+    </div>
+    <div class="field-row c3">
+      <div class="field"><label>CM (L)</label><input type="number" id="qr-cm-vol" placeholder="0" min="0" oninput="calcQuickRecipe()"></div>
+      <div class="field"><label>CM fat %</label><input type="number" id="qr-cm-fat" placeholder="4.0" step="0.1" value="4.0" oninput="calcQuickRecipe()"></div>
+      <div class="field"><label>CM SNF %</label><input type="number" id="qr-cm-snf" placeholder="8.5" step="0.1" value="8.5" oninput="calcQuickRecipe()"></div>
+    </div>
+    <div class="field-row c3">
+      <div class="field"><label>SM (L)</label><input type="number" id="qr-sm-vol" placeholder="500" min="0" oninput="calcQuickRecipe()"></div>
+      <div class="field"><label>SM fat %</label><input type="number" id="qr-sm-fat" placeholder="0.1" step="0.01" value="0.1" oninput="calcQuickRecipe()"></div>
+      <div class="field"><label>SM SNF %</label><input type="number" id="qr-sm-snf" placeholder="8.5" step="0.1" value="8.5" oninput="calcQuickRecipe()"></div>
+    </div>
+    <div class="field-row c2" style="margin-top:4px;">
+      <div class="field"><label>Cream available (kg)</label><input type="number" id="qr-cream-kg" placeholder="0" step="0.1" min="0" oninput="calcQuickRecipe()"></div>
+      <div class="field"><label>Cream fat %</label><input type="number" id="qr-cream-fat" placeholder="60" step="1" value="60" oninput="calcQuickRecipe()"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🧀 What to make (batch size in litres)</div>
+    <div id="qr-product-rows"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚙️ Settings</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
+      <div><div style="font-size:13px;font-weight:600;">BM ratio in paneer</div><div style="font-size:11px;color:var(--muted);">% of batch that should be BM</div></div>
+      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="qr-bm-ratio" value="20" type="number" step="1" min="5" max="50" oninput="calcQuickRecipe()"><span style="font-size:11px;color:var(--muted);">%</span></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
+      <div><div style="font-size:13px;font-weight:600;">Lite Curd SNF target</div></div>
+      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="qr-snf-curd-lite" value="11.5" type="number" step="0.1" min="8" max="15" oninput="calcQuickRecipe()"><span style="font-size:11px;color:var(--muted);">%</span></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;">
+      <div><div style="font-size:13px;font-weight:600;">Fresh Curd SNF target</div></div>
+      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="qr-snf-curd-fresh" value="10.5" type="number" step="0.1" min="8" max="15" oninput="calcQuickRecipe()"><span style="font-size:11px;color:var(--muted);">%</span></div>
+    </div>
+  </div>
+
+  <div id="qr-recipe-output"></div>
+
+  <div style="display:flex;gap:8px;margin-bottom:14px;">
+    <button onclick="copyQuickAll()" class="btn btn-wa" style="flex:1;">📲 Copy All for WhatsApp</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -643,10 +710,13 @@ function calcMilkOrder() {
     breakdown.push({p, vol, bm, cm, sm, cream});
   });
 
-  // ── BM gap — V2 BM is ordered to reach the quality ratio target ──
+  // ── BM gap — V2 BM ordered to reach quality ratio target ──
   const bmRatioPct = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
   const bmGap = Math.max(0, bmNeeded - v1BmVol);
-  const v2BmOrder = Math.min(Math.ceil(bmGap/10)*10, V2_MAX_BM); // round up to 10L
+  const bmCalc = Math.min(Math.ceil(bmGap/10)*10, V2_MAX_BM);
+  // Use manual override if operator entered it
+  const v2BmOverride = parseFloat(document.getElementById('v2-bm-expected')?.value);
+  const v2BmOrder = !isNaN(v2BmOverride) && v2BmOverride >= 0 ? v2BmOverride : bmCalc;
 
   // ── Cream deficit → extra CM from V2 ──
   const creamDeficit = Math.max(0, creamNeeded - creamFromV1);
@@ -659,6 +729,9 @@ function calcMilkOrder() {
     const creamPerLv2 = Bv2PerL / Av2; // kg cream per litre CM skimmed
     v2CmForCream = Math.ceil(creamDeficit / creamPerLv2 / 10)*10; // round up to 10L
     v2CmForCream = Math.min(v2CmForCream, V2_MAX_CM);
+    // Use manual override if operator entered it
+    const v2CmOverride = parseFloat(document.getElementById('v2-cm-expected')?.value);
+    if(!isNaN(v2CmOverride) && v2CmOverride >= 0) v2CmForCream = v2CmOverride;
     smFromV2Cm = Math.max(0, (v2CmForCream*1.028 - v2CmForCream*Bv2PerL/Av2)/1.032);
   }
 
@@ -764,6 +837,11 @@ function calcMilkOrder() {
     sv('bm1-vol', v1BmVol);
     sv('bm1-fat', v1BmFat);
     sv('bm1-snf', v1BmSnf.toFixed(1));
+    // Auto-fill V2 expected qty fields if not manually overridden
+    if(!document.getElementById('v2-bm-expected')?.value)
+      document.getElementById('v2-bm-expected').value = v2BmOrder||'';
+    if(!document.getElementById('v2-cm-expected')?.value)
+      document.getElementById('v2-cm-expected').value = v2CmForCream ? Math.round(v2CmForCream) : '';
     sv('bm2-vol', v2BmOrder);
     sv('bm2-fat', v2BmFat||v1BmFat);
     sv('bm2-snf', v2BmSnf||v1Snf);
@@ -1389,6 +1467,179 @@ function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg; t.classList.add('show');
   clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2800);
+}
+
+// ══ QUICK RECIPE MODE ══
+let quickModeActive = false;
+
+function toggleQuickMode() {
+  quickModeActive = !quickModeActive;
+  const mainContent = document.querySelector('.stepper');
+  const stepGuide   = document.getElementById('step-guide');
+  const bottomBar   = document.getElementById('bottom-bar');
+  const qrScreen    = document.getElementById('quick-recipe-screen');
+  const qrBtn       = document.getElementById('quick-btn');
+  const allScreens  = document.querySelectorAll('.screen');
+
+  if(quickModeActive) {
+    allScreens.forEach(s => s.style.display='none');
+    mainContent.style.display='none';
+    if(stepGuide) stepGuide.style.display='none';
+    qrScreen.style.display='block';
+    bottomBar.style.display='none';
+    qrBtn.textContent='✕ Exit Quick';
+    qrBtn.style.background='rgba(192,57,43,.8)';
+    renderQuickProductRows();
+  } else {
+    allScreens.forEach(s => s.style.display='');
+    mainContent.style.display='';
+    if(stepGuide) stepGuide.style.display='';
+    qrScreen.style.display='none';
+    bottomBar.style.display='';
+    qrBtn.textContent='⚡ Quick';
+    qrBtn.style.background='rgba(255,255,255,.2)';
+    goStep(currentStep); // restore current step
+  }
+}
+
+function renderQuickProductRows() {
+  const html = PRODUCTS.map(p => `
+    <div style="display:grid;grid-template-columns:auto 1fr 90px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:18px;">${p.icon}</span>
+      <div><div style="font-size:13px;font-weight:700;">${p.name}</div>
+           <div style="font-size:10px;color:var(--muted);">${p.fat}% fat · ${p.milkBase}</div></div>
+      <div>
+        <input type="number" id="qr-batch-${p.id}" placeholder="0" min="0" step="50"
+          style="border:1.5px solid var(--border);border-radius:8px;padding:7px 6px;font-size:13px;font-weight:700;text-align:right;width:100%;background:var(--cream);font-family:inherit;"
+          oninput="calcQuickRecipe()">
+        <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:2px;">litres</div>
+      </div>
+    </div>`).join('');
+  document.getElementById('qr-product-rows').innerHTML = html;
+}
+
+function calcQuickRecipe() {
+  const g = id => parseFloat(document.getElementById(id)?.value)||0;
+
+  const pool = {
+    bmVol:  g('qr-bm-vol'), bmFat:  g('qr-bm-fat')||6.5, bmSnf: g('qr-bm-snf')||9.0,
+    cmVol:  g('qr-cm-vol'), cmFat:  g('qr-cm-fat')||4.0, cmSnf: g('qr-cm-snf')||8.5,
+    smVol:  g('qr-sm-vol'), smFat:  g('qr-sm-fat')||0.1, smSnf: g('qr-sm-snf')||8.5,
+    creamKg:g('qr-cream-kg'),
+  };
+  const creamFatPct   = g('qr-cream-fat')||60;
+  const bmRatio       = g('qr-bm-ratio')/100 || 0.20;
+  const snfLiteCurd   = g('qr-snf-curd-lite')||11.5;
+  const snfFreshCurd  = g('qr-snf-curd-fresh')||10.5;
+
+  let html = '';
+  let bmUsed=0, smUsed=0, creamUsed=0;
+
+  PRODUCTS.forEach(prod => {
+    const vol = g('qr-batch-'+prod.id);
+    if(vol === 0) return;
+
+    let bmV=0, cmV=0, smV=0, creamKg=0, smpKg=0, warnings=[];
+
+    if(prod.fromCurd) {
+      const ings = prod.coag.map(c => fmtIng(c.n, c.per*vol, c.u));
+      html += recipeCard(prod, vol, 0, vol, [{label:'From Fresh Curd batch',qty:'',unit:''}], ings, [], pool, null, null, 0);
+      return;
+    }
+
+    if(prod.milkBase==='BM_SM') {
+      bmV = vol * bmRatio;
+      smV = vol - bmV;
+      const fatFromMilk = bmV*(pool.bmFat/100) + smV*(pool.smFat/100);
+      const fatNeeded   = vol * 1.032 * (prod.fat/100);
+      creamKg = Math.max(0, (fatNeeded - fatFromMilk) / (creamFatPct/100));
+      bmUsed += bmV; smUsed += smV; creamUsed += creamKg;
+      if(bmV > pool.bmVol) warnings.push('Need '+bmV.toFixed(0)+'L BM, only '+pool.bmVol+'L available');
+      if(smV > pool.smVol) warnings.push('Need '+smV.toFixed(0)+'L SM, only '+pool.smVol+'L available');
+      if(creamKg > pool.creamKg) warnings.push('Need '+creamKg.toFixed(2)+'kg cream, only '+pool.creamKg+'kg available');
+    } else if(prod.milkBase==='CM') {
+      cmV = vol;
+      if(cmV > pool.cmVol) warnings.push('Need '+cmV+'L CM, only '+pool.cmVol+'L available');
+    } else if(prod.milkBase==='SM') {
+      smV = vol; smUsed += smV;
+      if(smV > pool.smVol) warnings.push('Need '+smV+'L SM, only '+pool.smVol+'L available');
+    } else if(prod.milkBase==='CM_SM') {
+      const b = pearson(vol, prod.fat, pool.cmFat, pool.smFat);
+      cmV = b.aVol; smV = b.bVol; smUsed += smV;
+    }
+
+    // SNF / SMP
+    let targetSnf=null, milkSnf=0, milkDensity=1.030;
+    if(prod.id==='curd_lite')  { targetSnf=snfLiteCurd;  milkSnf=pool.smSnf||8.5; milkDensity=1.032; }
+    if(prod.id==='curd_fresh') { targetSnf=snfFreshCurd; milkSnf=pool.cmSnf||8.5; milkDensity=1.028; }
+    if(targetSnf) smpKg = calcSMP(vol, milkSnf, targetSnf, milkDensity);
+
+    const milkRows = [];
+    if(bmV>0) milkRows.push({label:'Buffalo Milk (BM)',qty:bmV.toFixed(0),unit:'L'});
+    if(cmV>0) milkRows.push({label:'Cow Milk (CM)',qty:cmV.toFixed(0),unit:'L'});
+    if(smV>0) milkRows.push({label:'Skim Milk (SM)',qty:smV.toFixed(0),unit:'L'});
+    if(creamKg>0) milkRows.push({label:'Cream',qty:creamKg.toFixed(2),unit:'kg'});
+
+    const addIng = [];
+    if(smpKg>0) addIng.push({name:'SMP', display:{qty:smpKg.toFixed(3)+' kg'}});
+    prod.coag.forEach(c => addIng.push(fmtIng(c.n, c.per*vol, c.u)));
+
+    html += recipeCard(prod, vol, 0, vol, milkRows, addIng, warnings, pool, targetSnf, milkSnf, smpKg);
+  });
+
+  if(!html) {
+    html = '<div class="card" style="color:var(--muted);text-align:center;padding:20px;">Enter batch sizes above</div>';
+  }
+  document.getElementById('qr-recipe-output').innerHTML = html;
+}
+
+function copyQuickAll() {
+  const g = id => parseFloat(document.getElementById(id)?.value)||0;
+  const pool = {
+    bmFat:g('qr-bm-fat')||6.5, smFat:g('qr-sm-fat')||0.1,
+    cmFat:g('qr-cm-fat')||4.0, bmVol:g('qr-bm-vol'), smVol:g('qr-sm-vol')
+  };
+  const creamFatPct = g('qr-cream-fat')||60;
+  const bmRatio     = g('qr-bm-ratio')/100 || 0.20;
+  const snfLiteCurd = g('qr-snf-curd-lite')||11.5;
+  const snfFreshCurd= g('qr-snf-curd-fresh')||10.5;
+
+  const date = new Date().toLocaleDateString('en-IN');
+  let msg = `*🧀 Gaavn Fresh — Recipes*\n📅 ${date}\n\n`;
+
+  PRODUCTS.forEach(prod => {
+    const vol = g('qr-batch-'+prod.id);
+    if(vol===0) return;
+    msg += `━━━━━━━━━━━━\n*${prod.icon} ${prod.name}* — ${vol}L\n`;
+    if(prod.fromCurd) { msg += `From Fresh Curd batch\n\n`; return; }
+    if(prod.milkBase==='BM_SM') {
+      const bmV=vol*bmRatio, smV=vol-bmV;
+      const fatFromMilk=bmV*(pool.bmFat/100)+smV*(pool.smFat/100);
+      const crKg=Math.max(0,(vol*1.032*(prod.fat/100)-fatFromMilk)/(creamFatPct/100));
+      if(bmV>0) msg+=`BM  ${bmV.toFixed(0)}lit\n`;
+      if(smV>0) msg+=`SM  ${smV.toFixed(0)}lit\n`;
+      if(crKg>0) msg+=`Cream  ${crKg.toFixed(2)}kg\n`;
+    } else if(prod.milkBase==='CM') msg+=`CM  ${vol}lit\n`;
+    else if(prod.milkBase==='SM')   msg+=`SM  ${vol}lit\n`;
+
+    let smpKg=0;
+    if(prod.id==='curd_lite')  smpKg=calcSMP(vol,g('qr-sm-snf')||8.5,snfLiteCurd,1.032);
+    if(prod.id==='curd_fresh') smpKg=calcSMP(vol,g('qr-cm-snf')||8.5,snfFreshCurd,1.028);
+    if(smpKg>0) msg+=`SMP  ${smpKg.toFixed(3)}kg\n`;
+    prod.coag.forEach(c => {
+      const qty=c.per*vol;
+      let v = c.u==='g/L' ? (qty/1000).toFixed(3)+' kg' : c.u==='ml/L' ? qty.toFixed(0)+' ml' : qty.toFixed(1)+' L';
+      msg+=`${c.n}  ${v}\n`;
+    });
+    msg+=`\n`;
+  });
+  msg+=`_Gaavn Fresh · Recipe Calculator_`;
+
+  navigator.clipboard.writeText(msg).catch(()=>{
+    const t=document.createElement('textarea'); t.value=msg;
+    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
+  });
+  showToast('✓ All recipes copied for WhatsApp!');
 }
 
 // ══ INIT ══
