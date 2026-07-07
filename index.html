@@ -55,6 +55,10 @@ details summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--green-
 .warn{background:#FFF3E0;border:1px solid #FFB74D;color:#7a4a00;border-radius:8px;padding:8px 12px;font-size:12px;margin-top:8px;}
 hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 .small{font-size:11px;}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px;}
+.modal-ov.open{display:flex;}
+.modal-bx{background:#fff;border-radius:12px;padding:18px;max-width:540px;width:100%;max-height:86vh;overflow:auto;}
+textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;font-size:12px;}
 </style>
 </head>
 <body>
@@ -73,6 +77,7 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
         <tr>
           <th>Vendor</th><th>BM Qty (L)</th><th>BM Fat %</th><th>BM SNF %</th>
           <th>CM Qty (L)</th><th>CM Fat %</th><th>CM SNF %</th>
+          <th>SM Qty (L)</th><th>SM SNF %</th>
         </tr>
       </table>
     </div>
@@ -101,6 +106,17 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
           <div class="field"><label>MF Paneer target Fat %</label><input type="number" step="0.01" id="s-mfFat" value="1.73"></div>
           <div class="field"><label>Malai Paneer target Fat %</label><input type="number" step="0.01" id="s-malaiFat" value="4.96"></div>
         </div>
+        <div class="muted" style="margin:8px 0;">Paneer yield is computed from the solids going in: <b>recovered fat + recovered protein (from SNF) + retained moisture</b>. Tune these to your process:</div>
+        <div class="grid3">
+          <div class="field"><label>Fat recovery %</label><input type="number" step="1" id="s-fatRec" value="90"></div>
+          <div class="field"><label>SNF/protein recovery %</label><input type="number" step="1" id="s-snfRec" value="60"></div>
+          <div class="field"><label>Paneer moisture %</label><input type="number" step="1" id="s-moist" value="52"></div>
+        </div>
+        <div class="grid2" style="align-items:end;margin-top:6px;">
+          <div class="field"><label>Yield correction factor <span class="muted">(actual ÷ theoretical)</span></label><input type="number" step="0.01" id="s-yieldFactor" value="1.00"></div>
+          <div class="field"><button class="btn-sec btn-sm" style="width:100%;" onclick="openCalib()">📈 Calibrate from history</button></div>
+        </div>
+        <div class="muted small">The correction factor multiplies the theoretical yield to absorb moisture / pressing / coagulation effects. Start at 1.00 and calibrate once you have a few real batches.</div>
       </div>
     </details>
   </div>
@@ -124,6 +140,22 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
   <!-- 4. RESULTS -->
   <div id="results"></div>
 
+</div>
+
+<div class="modal-ov" id="modal-calib">
+  <div class="modal-bx">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <h3 style="margin:0;color:var(--green-d);font-size:15px;">Calibrate Yield from History</h3>
+      <button class="btn-sec btn-sm" onclick="document.getElementById('modal-calib').classList.remove('open')">✕</button>
+    </div>
+    <div class="muted small" style="margin-bottom:8px;">Paste past paneer batches — one per line, comma-separated:<br><b>milk&nbsp;L, fat%, SNF%, actual paneer kg</b><br>(milk = the standardised milk that went into the batch). Then compute.</div>
+    <textarea id="calib-data" rows="7" placeholder="720, 1.73, 8.5, 98&#10;715, 1.70, 8.4, 96&#10;730, 1.75, 8.6, 101"></textarea>
+    <div style="margin-top:10px;display:flex;gap:8px;">
+      <button class="btn-blue btn-sm" onclick="calibrateYield()">Compute factor</button>
+      <button class="btn-primary btn-sm" id="calib-apply" style="display:none;" onclick="applyCalib()">Apply to Standards</button>
+    </div>
+    <div id="calib-result" style="margin-top:12px;"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -179,6 +211,8 @@ function std(){
   return {
     creamFat:num('s-creamFat'),creamSnf:num('s-creamSnf'),density:num('s-density')||1.03,
     skimFat:num('s-skimFat'),skimSnf:num('s-skimSnf'),chakka:(num('s-chakka')||50)/100,
+    fatRec:(num('s-fatRec')||90)/100, snfRec:(num('s-snfRec')||60)/100, moist:(num('s-moist')||52)/100,
+    yieldFactor:num('s-yieldFactor')||1,
     mf:{fat:num('s-mfFat')},
     malai:{fat:num('s-malaiFat')}
   };
@@ -190,7 +224,7 @@ function addVendorRow(){
   var i=tbl.rows.length; // 1-based excluding header handled by count
   var tr=tbl.insertRow(-1);
   tr.innerHTML='<td>V'+i+'</td>'+
-    ['BmQty','BmFat','BmSnf','CmQty','CmFat','CmSnf'].map(function(k){
+    ['BmQty','BmFat','BmSnf','CmQty','CmFat','CmSnf','SmQty','SmSnf'].map(function(k){
       var step=/Fat|Snf/.test(k)?' step="0.01"':'';
       return '<td><input type="number"'+step+' class="vin" data-k="'+k+'" oninput="saveState()"></td>';
     }).join('');
@@ -208,14 +242,16 @@ function readIntake(){
 // ---- build milk pool --------------------------------------------------
 function buildPool(){
   var rows=readIntake();var s=std();
-  var bmQ=0,bmF=0,bmS=0,cmQ=0,cmF=0,cmS=0;
+  var bmQ=0,bmF=0,bmS=0,cmQ=0,cmF=0,cmS=0,smQ=0,smS=0;
   rows.forEach(function(v){
     bmQ+=v.BmQty; bmF+=v.BmQty*v.BmFat/100; bmS+=v.BmQty*v.BmSnf/100;
     cmQ+=v.CmQty; cmF+=v.CmQty*v.CmFat/100; cmS+=v.CmQty*v.CmSnf/100;
+    smQ+=v.SmQty; smS+=v.SmQty*((v.SmSnf||s.skimSnf))/100;
   });
   return {
     bm:{qty:bmQ, fat:bmQ?bmF/bmQ*100:0, snf:bmQ?bmS/bmQ*100:0},   // L, %
     cm:{qty:cmQ, fat:cmQ?cmF/cmQ*100:0, snf:cmQ?cmS/cmQ*100:0},
+    sm:{qty:smQ, snf:smQ?smS/smQ*100:0},                          // direct skim, bypasses separation
     density:s.density
   };
 }
@@ -275,8 +311,13 @@ function solvePaneer(mixMassKg, tFat, pool, avail, targetOut, nominalBML){
   if(skimL>1e-6)ratios.push(avail.skimL/skimL);
   if(creamKg>1e-6)ratios.push(avail.creamKg/creamKg);
   var maxOut=(targetOut||0)*(ratios.length?Math.min.apply(null,ratios):1);
+  // Solids-based predicted paneer yield = (recovered fat + recovered SNF/protein) / (1 - moisture)
+  var fatMass=bmKg*fbm + sk*fsk + creamKg*fcr;   // total fat in mix (kg)
+  var moist=s.moist;
+  var predicted=(1-moist>1e-6)?(s.fatRec*fatMass + s.snfRec*snfMass)/(1-moist):0;
+  predicted*=(s.yieldFactor||1);
   return {feasible:short.length===0, bmL:bmUseL, skimL:skimL, creamKg:creamKg,
-          snfPct:snfPct, bmLeaned:(bmUseL<nominalBML-0.01), short:short, maxOut:maxOut};
+          snfPct:snfPct, bmLeaned:(bmUseL<nominalBML-0.01), short:short, maxOut:maxOut, predicted:predicted};
 }
 function det3(m){return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);}
 function rep(A,col,B){var C=A.map(function(r){return r.slice();});for(var i=0;i<3;i++)C[i][col]=B[i];return C;}
@@ -379,9 +420,16 @@ function renderBlocks(){
     } else {
       b.lines.forEach(function(l){out+='<div class="ing"><span>'+l[0]+'</span><span>'+fmt(l[1])+' '+l[2]+'</span></div>';});
       // yield row
-      out+='<hr><div class="ing"><span>Expected yield</span><span>'+fmt(b.out)+' '+b.unit+'</span></div>';
+      out+='<hr>';
+      if(b.predicted!=null){
+        out+='<div class="ing"><span>Recipe target (milk sized for)</span><span>'+fmt(b.out)+' '+b.unit+'</span></div>';
+        out+='<div class="ing"><span>Solids-predicted yield</span><span style="font-weight:800;color:var(--green-d);">'+fmt(b.predicted)+' '+b.unit+'</span></div>';
+      } else {
+        out+='<div class="ing"><span>Expected yield</span><span>'+fmt(b.out)+' '+b.unit+'</span></div>';
+      }
+      var _base=(b.predicted!=null)?b.predicted:b.out;
       out+='<div class="ing"><span>Actual yield</span><span><input type="number" style="width:90px;padding:4px;" placeholder="enter" oninput="setActual(\''+b.product+'\',this.value)" value="'+(b.actual||'')+'"></span></div>';
-      if(b.actual){var yp=b.out>0?(b.actual/b.out*100):0;out+='<div class="ing"><span>Yield %</span><span style="font-weight:700;color:'+(yp<95?'var(--red)':'var(--green)')+'">'+r2(yp)+'%</span></div>';var loss=b.out-b.actual;out+='<div class="ing"><span>Loss vs expected</span><span>'+fmt(loss)+' '+b.unit+'</span></div>';}
+      if(b.actual){var yp=_base>0?(b.actual/_base*100):0;out+='<div class="ing"><span>Yield % (vs '+(b.predicted!=null?'predicted':'expected')+')</span><span style="font-weight:700;color:'+(yp<95?'var(--red)':'var(--green)')+'">'+r2(yp)+'%</span></div>';var loss=_base-b.actual;out+='<div class="ing"><span>Loss</span><span>'+fmt(loss)+' '+b.unit+'</span></div>';}
     }
     out+='</div>';
   });
@@ -415,7 +463,7 @@ function saveState(){
   var payload={intake:STATE.intake,plan:STATE.plan,std:{
     creamFat:$('s-creamFat').value,creamSnf:$('s-creamSnf').value,density:$('s-density').value,
     skimFat:$('s-skimFat').value,skimSnf:$('s-skimSnf').value,chakka:$('s-chakka').value,
-    mfFat:$('s-mfFat').value,malaiFat:$('s-malaiFat').value
+    mfFat:$('s-mfFat').value,malaiFat:$('s-malaiFat').value,fatRec:$('s-fatRec').value,snfRec:$('s-snfRec').value,moist:$('s-moist').value,yieldFactor:$('s-yieldFactor').value
   }};
   try{localStorage.setItem(LS,JSON.stringify(payload));}catch(e){}
 }
@@ -431,7 +479,7 @@ function loadState(){
       ins.forEach(function(inp){if(v[inp.dataset.k])inp.value=v[inp.dataset.k];});
     });
   }
-  if(raw&&raw.std){var m=raw.std;var map={'s-creamFat':'creamFat','s-creamSnf':'creamSnf','s-density':'density','s-skimFat':'skimFat','s-skimSnf':'skimSnf','s-chakka':'chakka','s-mfFat':'mfFat','s-malaiFat':'malaiFat'};for(var id in map){if(m[map[id]]!==undefined&&m[map[id]]!=='')$(id).value=m[map[id]];}}
+  if(raw&&raw.std){var m=raw.std;var map={'s-creamFat':'creamFat','s-creamSnf':'creamSnf','s-density':'density','s-skimFat':'skimFat','s-skimSnf':'skimSnf','s-chakka':'chakka','s-mfFat':'mfFat','s-malaiFat':'malaiFat','s-fatRec':'fatRec','s-snfRec':'snfRec','s-moist':'moist','s-yieldFactor':'yieldFactor'};for(var id in map){if(m[map[id]]!==undefined&&m[map[id]]!=='')$(id).value=m[map[id]];}}
   if(raw&&raw.plan)STATE.plan=raw.plan;
 }
 
@@ -440,16 +488,17 @@ function runPlan(){
   if(pool.bm.qty+pool.cm.qty<=0){toast('Enter milk intake first');return;}
   var planned={};STATE.plan.forEach(function(b){planned[b.product]=(planned[b.product]||0)+b.qty;});
   var log=[],shortages=[],blocks=[];
-  var inv={bmL:pool.bm.qty,cmL:pool.cm.qty,skimL:0,creamKg:0,curdKg:0,chakkaKg:0,excessCreamKg:0,purchased:{},finished:{}};
+  var inv={bmL:pool.bm.qty,cmL:pool.cm.qty,skimL:(pool.sm?pool.sm.qty:0),creamKg:0,curdKg:0,chakkaKg:0,excessCreamKg:0,purchased:{},finished:{}};
 
   var khoyaOut=planned["CM Khoya"]||0;var kdef=PRODUCTS["CM Khoya"];var cmReserved=0;
   if(khoyaOut>0){cmReserved=kdef.consumes.CM*(khoyaOut/kdef.output);if(cmReserved>inv.cmL+0.01)shortages.push("Khoya needs "+fmt(cmReserved)+" L CM but only "+fmt(inv.cmL)+" L available");}
-  log.push("Received BM "+fmt(inv.bmL)+" L ("+r2(pool.bm.fat)+"% fat / "+r2(pool.bm.snf)+"% SNF), CM "+fmt(inv.cmL)+" L ("+r2(pool.cm.fat)+"% fat / "+r2(pool.cm.snf)+"% SNF).");
+  log.push("Received BM "+fmt(inv.bmL)+" L ("+r2(pool.bm.fat)+"% fat / "+r2(pool.bm.snf)+"% SNF), CM "+fmt(inv.cmL)+" L ("+r2(pool.cm.fat)+"% fat / "+r2(pool.cm.snf)+"% SNF)"+(pool.sm&&pool.sm.qty>0?", plus direct Skim "+fmt(pool.sm.qty)+" L ("+r2(pool.sm.snf)+"% SNF) \u2192 straight to skim pool":"")+".");
   log.push("Reserved "+fmt(cmReserved)+" L cow milk for Khoya (whole, before separation).");
   var cmForSep=Math.max(0,inv.cmL-cmReserved);
   var sep=separate(cmForSep,pool.cm.fat,pool.cm.snf);
   inv.skimL+=sep.skimL;inv.creamKg+=sep.creamKg;
-  log.push("Separated "+fmt(cmForSep)+" L cow milk → Fresh Cream "+fmt(sep.creamKg)+" kg + Skim "+fmt(sep.skimL)+" L.");
+  var _cy=cmForSep>0?(sep.creamKg/(cmForSep*s.density)*100):0;
+  log.push("Separated "+fmt(cmForSep)+" L cow milk \u2192 Fresh Cream "+fmt(sep.creamKg)+" kg (\u2248 "+r2(_cy)+"% cream yield) + Skim "+fmt(sep.skimL)+" L.");
 
   PRIORITY.forEach(function(prod){
     var out=planned[prod]||0;if(out<=0)return;
@@ -472,6 +521,7 @@ function runPlan(){
         block.lines.push(['Fresh cream',sol.creamKg,'kg']);
         for(var a in def.additives){block.lines.push([a,def.additives[a]*factor,def.additiveUnits[a]]);addPurch(inv,a,def.additives[a]*factor);}
         block.mixInfo="Fat held at "+t.fat+"% \u00b7 resulting SNF "+r2(sol.snfPct)+"% (not targeted)"+(sol.bmLeaned?" \u00b7 BM short \u2192 cream+skim covered it":"");
+        block.predicted=sol.predicted;
         inv.finished[prod]=(inv.finished[prod]||0)+out;
       }
     } else if(def.type==='khoya'){
@@ -512,11 +562,56 @@ function runPlan(){
   renderResults();saveState();
 }
 
+
+// ---- yield calibration from historical batches -----------------------
+var _calibFactor=null;
+function openCalib(){document.getElementById('modal-calib').classList.add('open');}
+function calibrateYield(){
+  var s=std();
+  var txt=(document.getElementById('calib-data').value||'').trim();
+  var lines=txt.split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
+  var factors=[], sumA=0, sumT=0, rows=0;
+  lines.forEach(function(l){
+    var p=l.split(/[,\t]+/).map(function(x){return parseFloat(x);});
+    if(p.length<4||p.some(isNaN))return;
+    var milkL=p[0],fat=p[1],snf=p[2],actual=p[3];
+    var milkKg=milkL*s.density;
+    var fatMass=milkKg*fat/100, snfMass=milkKg*snf/100;
+    var theo=(1-s.moist>1e-6)?(s.fatRec*fatMass+s.snfRec*snfMass)/(1-s.moist):0;
+    if(theo<=0)return;
+    factors.push(actual/theo); sumA+=actual; sumT+=theo; rows++;
+  });
+  var el=document.getElementById('calib-result');
+  if(!rows){el.innerHTML='<div class="warn">No valid rows found. Use: milk L, fat%, SNF%, paneer kg</div>';document.getElementById('calib-apply').style.display='none';return;}
+  var overall=sumA/sumT;                              // pooled factor
+  var mean=factors.reduce(function(a,b){return a+b;},0)/rows;
+  var mn=Math.min.apply(null,factors), mx=Math.max.apply(null,factors);
+  var variance=factors.reduce(function(a,b){return a+(b-mean)*(b-mean);},0)/rows;
+  var cv=mean>0?Math.sqrt(variance)/mean*100:0;
+  _calibFactor=overall;
+  el.innerHTML='<div class="result-block">'
+    +'<div class="ing"><span>Batches used</span><span>'+rows+'</span></div>'
+    +'<div class="ing"><span>Yield correction factor</span><span style="font-weight:800;color:var(--green-d);">'+r2(overall)+'</span></div>'
+    +'<div class="ing"><span>Per-batch range</span><span>'+r2(mn)+' – '+r2(mx)+'</span></div>'
+    +'<div class="ing"><span>Variability (CV)</span><span style="color:'+(cv>8?'var(--red)':'var(--green)')+';">'+r2(cv)+'%</span></div>'
+    +'</div>'
+    +'<div class="muted small">CV shows how much your process swings batch-to-batch. Under ~5% is tight; high CV means moisture/pressing/coagulation vary a lot and the average is your best planning number.</div>';
+  document.getElementById('calib-apply').style.display='';
+}
+function applyCalib(){
+  if(_calibFactor==null)return;
+  document.getElementById('s-yieldFactor').value=r2(_calibFactor);
+  saveState();
+  document.getElementById('modal-calib').classList.remove('open');
+  if(STATE.lastRun)runPlan();
+  toast('✓ Yield factor set to '+r2(_calibFactor));
+}
+
 // ---- init -------------------------------------------------------------
 refreshProductDropdown();
 loadState();
 renderPlan();
-['s-creamFat','s-creamSnf','s-density','s-skimFat','s-skimSnf','s-chakka','s-mfFat','s-malaiFat'].forEach(function(id){$(id).addEventListener('input',saveState);});
+['s-creamFat','s-creamSnf','s-density','s-skimFat','s-skimSnf','s-chakka','s-mfFat','s-malaiFat','s-fatRec','s-snfRec','s-moist','s-yieldFactor'].forEach(function(id){$(id).addEventListener('input',saveState);});
 </script>
 </body>
 </html>
