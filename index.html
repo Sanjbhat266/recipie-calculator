@@ -60,7 +60,7 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 <body>
 <header>
   <h1>🐄 GAAVN Production Planner</h1>
-  <span class="ver" id="ver">v1</span>
+  <span class="ver" id="ver">v2</span>
 </header>
 
 <div class="wrap">
@@ -96,12 +96,10 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
           <div class="field"><label>Curd → Chakka yield %</label><input type="number" step="1" id="s-chakka" value="50"></div>
         </div>
         <hr>
-        <div class="muted" style="margin-bottom:8px;">Paneer milk-mix targets (the reformulator holds these while adjusting BM / cream / skim):</div>
+        <div class="muted" style="margin-bottom:8px;">Paneer standardises on <b>FAT only</b> — buffalo milk is used first, cream covers any fat gap when BM is short, and skim fills the volume. SNF is whatever it works out to (shown per batch); yield varies with it.</div>
         <div class="grid2">
           <div class="field"><label>MF Paneer target Fat %</label><input type="number" step="0.01" id="s-mfFat" value="1.73"></div>
-          <div class="field"><label>MF Paneer target SNF %</label><input type="number" step="0.01" id="s-mfSnf" value="8.52"></div>
           <div class="field"><label>Malai Paneer target Fat %</label><input type="number" step="0.01" id="s-malaiFat" value="4.96"></div>
-          <div class="field"><label>Malai Paneer target SNF %</label><input type="number" step="0.01" id="s-malaiSnf" value="8.74"></div>
         </div>
       </div>
     </details>
@@ -136,7 +134,7 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 // Sequence: reserve CM for Khoya → separate cream from remaining CM →
 //           Paneer (auto-reformulated) → Curd → curd-derived → excess cream→ghee
 // ══════════════════════════════════════════════════════════════════════
-var LS='gaavn_planner_v1';
+var LS='gaavn_planner_v2';
 var VENDORS=5;
 
 // ---- Product definitions (your recipe formats preserved) --------------
@@ -181,8 +179,8 @@ function std(){
   return {
     creamFat:num('s-creamFat'),creamSnf:num('s-creamSnf'),density:num('s-density')||1.03,
     skimFat:num('s-skimFat'),skimSnf:num('s-skimSnf'),chakka:(num('s-chakka')||50)/100,
-    mf:{fat:num('s-mfFat'),snf:num('s-mfSnf')},
-    malai:{fat:num('s-malaiFat'),snf:num('s-malaiSnf')}
+    mf:{fat:num('s-mfFat')},
+    malai:{fat:num('s-malaiFat')}
   };
 }
 
@@ -245,31 +243,40 @@ function separate(cmL, cmFat, cmSnf){
 // in the pool it is a genuine shortage — report the deficit and the max makeable
 // output. (You cannot substitute cream for BM without breaking SNF, so there is
 // no free "flex" at fixed spec — being BM-short means a smaller batch.)
-function solvePaneer(mixMassKg, tFat, tSnf, pool, avail, targetOut){
+function solvePaneer(mixMassKg, tFat, pool, avail, targetOut, nominalBML){
+  // FAT-ONLY standardisation. Hold target FAT%. Use buffalo milk up to its
+  // nominal amount (capped by availability); cover any remaining fat with fresh
+  // cream; fill the rest of the volume with skim. SNF is NOT targeted — it comes
+  // out to whatever it is (reported for info); yield varies accordingly. BM-short
+  // just means leaning on cream + skim, which uses up idle skim.
   var s=std();
-  var fbm=pool.bm.fat/100, sbm=pool.bm.snf/100;   // BM fractions
+  var fbm=pool.bm.fat/100, sbm=pool.bm.snf/100;
   var fsk=s.skimFat/100, ssk=s.skimSnf/100;
   var fcr=s.creamFat/100, scr=s.creamSnf/100;
-  var M=mixMassKg, Ff=M*tFat/100, Fs=M*tSnf/100;
-  var A=[[1,1,1],[fbm,fsk,fcr],[sbm,ssk,scr]], B=[M,Ff,Fs];
-  var d=det3(A); if(Math.abs(d)<1e-9)return {feasible:false,short:["cannot solve mix — check standards"]};
-  var b=det3(rep(A,0,B))/d, sk=det3(rep(A,1,B))/d, c=det3(rep(A,2,B))/d;
-  if(b<-1e-6||sk<-1e-6||c<-1e-6){
-    return {feasible:false,short:["target fat/SNF not reachable with this milk — check standards"]};
+  var dens=s.density;
+  var M=mixMassKg, Ff=M*tFat/100;
+  var bmUseL=Math.min(nominalBML, avail.bmL); if(bmUseL<0)bmUseL=0;
+  var bmKg=bmUseL*dens, rem=M-bmKg;
+  // solve skim+cream:  s+c = rem ;  bmKg*fbm + s*fsk + c*fcr = Ff
+  var c=(Ff - bmKg*fbm - fsk*rem)/(fcr-fsk);
+  var sk=rem-c;
+  if(c<0){ // BM alone overshoots fat target → drop cream, trim BM
+    c=0;
+    bmKg=(Ff - fsk*M)/(fbm-fsk); if(bmKg<0)bmKg=0;
+    bmUseL=bmKg/dens; sk=M-bmKg;
   }
-  var densB=s.density;
-  var bmL=b/densB, skimL=sk/densB, creamKg=c;
+  var creamKg=c<0?0:c, skimL=sk/dens;
   var short=[];
-  if(bmL>avail.bmL+0.01) short.push("BM "+fmt(bmL-avail.bmL)+" L");
   if(skimL>avail.skimL+0.01) short.push("Skim "+fmt(skimL-avail.skimL)+" L");
   if(creamKg>avail.creamKg+0.001) short.push("Fresh cream "+fmt(creamKg-avail.creamKg)+" kg");
-  // Max makeable output = tightest resource ratio × target output
+  var snfMass=bmKg*sbm + sk*ssk + creamKg*scr;
+  var snfPct=M>0?snfMass/M*100:0;
   var ratios=[];
-  if(bmL>1e-6)ratios.push(avail.bmL/bmL);
   if(skimL>1e-6)ratios.push(avail.skimL/skimL);
   if(creamKg>1e-6)ratios.push(avail.creamKg/creamKg);
-  var maxOut=(targetOut||0)*Math.max(0,ratios.length?Math.min.apply(null,ratios):0);
-  return {feasible:short.length===0, bmL:bmL, skimL:skimL, creamKg:creamKg, short:short, maxOut:maxOut};
+  var maxOut=(targetOut||0)*(ratios.length?Math.min.apply(null,ratios):1);
+  return {feasible:short.length===0, bmL:bmUseL, skimL:skimL, creamKg:creamKg,
+          snfPct:snfPct, bmLeaned:(bmUseL<nominalBML-0.01), short:short, maxOut:maxOut};
 }
 function det3(m){return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);}
 function rep(A,col,B){var C=A.map(function(r){return r.slice();});for(var i=0;i<3;i++)C[i][col]=B[i];return C;}
@@ -319,6 +326,17 @@ function renderResults(){
   // Per product recipes
   h+='<div class="card"><h3>Batch Recipes &amp; Yield</h3>';
   h+=renderBlocks();
+  h+='</div>';
+
+  // Cream balance (separated → used by paneer → left for ghee)
+  var invc=R.inv;
+  var creamSep=R.freshCreamTotal||0;
+  var creamGhee=invc.excessCreamKg||0;
+  var creamUsed=Math.max(0,creamSep-creamGhee);
+  h+='<div class="card"><h3>Cream Balance</h3>';
+  h+='<div class="ing"><span>Fresh cream separated today</span><span>'+fmt(creamSep)+' kg</span></div>';
+  h+='<div class="ing"><span>Used in paneer</span><span>'+fmt(creamUsed)+' kg</span></div>';
+  h+='<div class="ing" style="font-weight:800;color:var(--amber);border-bottom:none;padding-top:6px;"><span>Cream left for Ghee</span><span>'+fmt(creamGhee)+' kg</span></div>';
   h+='</div>';
 
   // Inventory dashboard
@@ -386,7 +404,8 @@ function copyPlan(){
   });
   var inv=R.inv;
   t+='\n=== INVENTORY AFTER ===\n';
-  t+='BM left: '+fmt(inv.bmL)+' L\nSkim left: '+fmt(inv.skimL)+' L\nFresh cream left: '+fmt(inv.creamKg)+' kg\nCream→Ghee: '+fmt(inv.excessCreamKg)+' kg\nCurd left: '+fmt(inv.curdKg)+' kg\n';
+  t+='Cream separated: '+fmt(R.freshCreamTotal||0)+' kg | used in paneer: '+fmt(Math.max(0,(R.freshCreamTotal||0)-(inv.excessCreamKg||0)))+' kg | left for Ghee: '+fmt(inv.excessCreamKg)+' kg\n';
+  t+='BM left: '+fmt(inv.bmL)+' L\nSkim left: '+fmt(inv.skimL)+' L\nCurd left: '+fmt(inv.curdKg)+' kg\n';
   if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){toast('✓ Plan copied');},function(){toast('Copy failed');});
 }
 
@@ -396,7 +415,7 @@ function saveState(){
   var payload={intake:STATE.intake,plan:STATE.plan,std:{
     creamFat:$('s-creamFat').value,creamSnf:$('s-creamSnf').value,density:$('s-density').value,
     skimFat:$('s-skimFat').value,skimSnf:$('s-skimSnf').value,chakka:$('s-chakka').value,
-    mfFat:$('s-mfFat').value,mfSnf:$('s-mfSnf').value,malaiFat:$('s-malaiFat').value,malaiSnf:$('s-malaiSnf').value
+    mfFat:$('s-mfFat').value,malaiFat:$('s-malaiFat').value
   }};
   try{localStorage.setItem(LS,JSON.stringify(payload));}catch(e){}
 }
@@ -412,7 +431,7 @@ function loadState(){
       ins.forEach(function(inp){if(v[inp.dataset.k])inp.value=v[inp.dataset.k];});
     });
   }
-  if(raw&&raw.std){var m=raw.std;var map={'s-creamFat':'creamFat','s-creamSnf':'creamSnf','s-density':'density','s-skimFat':'skimFat','s-skimSnf':'skimSnf','s-chakka':'chakka','s-mfFat':'mfFat','s-mfSnf':'mfSnf','s-malaiFat':'malaiFat','s-malaiSnf':'malaiSnf'};for(var id in map){if(m[map[id]]!==undefined&&m[map[id]]!=='')$(id).value=m[map[id]];}}
+  if(raw&&raw.std){var m=raw.std;var map={'s-creamFat':'creamFat','s-creamSnf':'creamSnf','s-density':'density','s-skimFat':'skimFat','s-skimSnf':'skimSnf','s-chakka':'chakka','s-mfFat':'mfFat','s-malaiFat':'malaiFat'};for(var id in map){if(m[map[id]]!==undefined&&m[map[id]]!=='')$(id).value=m[map[id]];}}
   if(raw&&raw.plan)STATE.plan=raw.plan;
 }
 
@@ -439,11 +458,12 @@ function runPlan(){
     if(def.type==='paneer'){
       var t=s[def.targetKey];var nm=def.nominalMix;
       var mixMass=((nm.BM+nm.SM)*s.density+nm.Cream)*factor;
-      var sol=solvePaneer(mixMass,t.fat,t.snf,pool,{bmL:inv.bmL,skimL:inv.skimL,creamKg:inv.creamKg},out);
+      var nominalBML=nm.BM*factor;
+      var sol=solvePaneer(mixMass,t.fat,pool,{bmL:inv.bmL,skimL:inv.skimL,creamKg:inv.creamKg},out,nominalBML);
       if(!sol.feasible){
         block.short=(sol.short&&sol.short.length)?sol.short:['infeasible'];
         block.maxOut=sol.maxOut;
-        shortages.push(prod+": short of "+block.short.join(', ')+((sol.maxOut>0)?" (max makeable ≈ "+fmt(sol.maxOut)+" "+def.unit+" at this spec)":""));
+        shortages.push(prod+": short of "+block.short.join(', ')+((sol.maxOut>0)?" (max makeable \u2248 "+fmt(sol.maxOut)+" "+def.unit+")":""));
       }
       else{
         inv.bmL-=sol.bmL;inv.skimL-=sol.skimL;inv.creamKg-=sol.creamKg;
@@ -451,7 +471,7 @@ function runPlan(){
         block.lines.push(['Skim milk',sol.skimL,'L']);
         block.lines.push(['Fresh cream',sol.creamKg,'kg']);
         for(var a in def.additives){block.lines.push([a,def.additives[a]*factor,def.additiveUnits[a]]);addPurch(inv,a,def.additives[a]*factor);}
-        block.mixInfo="Standardised to "+t.fat+"% fat / "+t.snf+"% SNF (BM "+fmt(sol.bmL)+" L + Skim "+fmt(sol.skimL)+" L + Cream "+fmt(sol.creamKg)+" kg)";
+        block.mixInfo="Fat held at "+t.fat+"% \u00b7 resulting SNF "+r2(sol.snfPct)+"% (not targeted)"+(sol.bmLeaned?" \u00b7 BM short \u2192 cream+skim covered it":"");
         inv.finished[prod]=(inv.finished[prod]||0)+out;
       }
     } else if(def.type==='khoya'){
@@ -488,7 +508,7 @@ function runPlan(){
   inv.excessCreamKg=Math.max(0,inv.creamKg);
   if(inv.excessCreamKg>0.001)log.push("Excess fresh cream "+fmt(inv.excessCreamKg)+" kg → cream inventory (for Ghee).");
 
-  STATE.lastRun={log:log,inv:inv,shortages:shortages,blocks:blocks,cmReservedLeft:cmReserved,planned:planned,pool:pool};
+  STATE.lastRun={log:log,inv:inv,shortages:shortages,blocks:blocks,cmReservedLeft:cmReserved,planned:planned,pool:pool,freshCreamTotal:sep.creamKg};
   renderResults();saveState();
 }
 
@@ -496,7 +516,8 @@ function runPlan(){
 refreshProductDropdown();
 loadState();
 renderPlan();
-['s-creamFat','s-creamSnf','s-density','s-skimFat','s-skimSnf','s-chakka','s-mfFat','s-mfSnf','s-malaiFat','s-malaiSnf'].forEach(function(id){$(id).addEventListener('input',saveState);});
+['s-creamFat','s-creamSnf','s-density','s-skimFat','s-skimSnf','s-chakka','s-mfFat','s-malaiFat'].forEach(function(id){$(id).addEventListener('input',saveState);});
 </script>
 </body>
 </html>
+                                                                                                                                                                                                                                    
