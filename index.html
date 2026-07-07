@@ -2,1683 +2,501 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Gaavn Fresh — Recipe Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5">
+<title>GAAVN Production Planner</title>
 <style>
-  :root {
-    --green:#1A3A1F; --green2:#2E6B35; --amber:#C8860A; --amber-lt:#FDF3DC;
-    --cream:#F5F0E8; --surface:#FFFFFF; --border:#D9D2C5; --muted:#7A7060;
-    --ink:#1C1A16; --red:#C0392B; --blue:#1565C0; --teal:#00695C;
-  }
-  *{box-sizing:border-box;margin:0;padding:0;}
-  body{background:var(--cream);font-family:'DM Sans',system-ui,sans-serif;color:var(--ink);min-height:100vh;}
-
-  .header{background:var(--green);color:#fff;padding:14px 16px 12px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
-  .header-logo{font-size:22px;}
-  .header-title{font-size:15px;font-weight:700;}
-  .header-sub{font-size:11px;opacity:.7;}
-  .header-date{margin-left:auto;font-size:11px;opacity:.7;text-align:right;}
-
-  .stepper{display:flex;background:var(--green);padding:0 12px 14px;gap:3px;}
-  .step-btn{flex:1;padding:7px 2px;font-size:10px;font-weight:700;border:none;background:rgba(255,255,255,.12);color:rgba(255,255,255,.5);cursor:pointer;border-radius:6px;transition:all .2s;line-height:1.3;}
-  .step-btn.active{background:var(--amber);color:#fff;}
-  .step-btn.done{background:rgba(255,255,255,.22);color:#fff;}
-
-  .screen{display:none;padding:14px 14px 110px;}
-  .screen.active{display:block;}
-
-  .card{background:var(--surface);border-radius:14px;padding:16px;margin-bottom:14px;border:1px solid var(--border);}
-  .card-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;display:flex;align-items:center;gap:6px;}
-
-  /* PRODUCT ROWS */
-  .product-row{display:grid;grid-template-columns:auto 1fr 90px 90px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);}
-  .product-row:last-child{border-bottom:none;}
-  .pr-icon{font-size:20px;text-align:center;}
-  .pr-info .pr-name{font-size:13px;font-weight:700;}
-  .pr-info .pr-sub{font-size:10px;color:var(--muted);}
-  .pr-input{border:1.5px solid var(--border);border-radius:8px;padding:7px 6px;font-size:13px;font-weight:700;text-align:right;width:100%;background:var(--cream);font-family:inherit;color:var(--ink);}
-  .pr-input:focus{outline:none;border-color:var(--amber);background:#fff;}
-  .pr-label{font-size:9px;color:var(--muted);text-align:center;margin-top:2px;}
-
-  /* MILK NEEDED SUMMARY */
-  .need-card{background:var(--amber-lt);border-radius:12px;padding:14px;margin-bottom:14px;border:1.5px solid #F0D080;}
-  .need-title{font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px;}
-  .need-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F0D080;}
-  .need-row:last-child{border-bottom:none;}
-  .need-label{font-size:12px;color:var(--muted);}
-  .need-value{font-size:14px;font-weight:700;}
-  .need-total{background:var(--amber);color:#fff;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-top:10px;}
-  .need-total .t-label{font-size:12px;font-weight:600;}
-  .need-total .t-value{font-size:18px;font-weight:700;}
-
-  /* VENDOR CARDS */
-  .vendor-block{background:var(--cream);border-radius:12px;padding:12px;margin-bottom:10px;border:1.5px solid var(--border);}
-  .vendor-header{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-  .vtag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;}
-  .vtag.bm{background:#FFF3E0;color:#E65100;}
-  .vtag.cm{background:#E8F5E9;color:#2E7D32;}
-  .vtag.sm{background:#E3F2FD;color:#1565C0;}
-  .vname{font-size:13px;font-weight:700;}
-  .vtime{margin-left:auto;font-size:11px;color:var(--muted);background:var(--surface);padding:3px 8px;border-radius:6px;border:1px solid var(--border);}
-  .field-row{display:grid;gap:8px;margin-bottom:8px;}
-  .field-row.c2{grid-template-columns:1fr 1fr;}
-  .field-row.c3{grid-template-columns:1fr 1fr 1fr;}
-  .field{display:flex;flex-direction:column;gap:3px;}
-  .field label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
-  .field input{border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;font-size:14px;font-family:inherit;color:var(--ink);background:var(--surface);width:100%;}
-  .field input:focus{outline:none;border-color:var(--amber);}
-
-  /* SCHEDULE TIMELINE */
-  .timeline{margin-top:4px;}
-  .tl-row{display:flex;align-items:stretch;gap:0;margin-bottom:4px;}
-  .tl-time{width:52px;font-size:10px;font-weight:700;color:var(--muted);padding-top:8px;flex-shrink:0;}
-  .tl-dot-col{width:20px;display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
-  .tl-dot{width:10px;height:10px;border-radius:50%;margin-top:10px;flex-shrink:0;}
-  .tl-line{width:2px;background:var(--border);flex:1;margin-top:2px;}
-  .tl-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-left:6px;margin-bottom:4px;}
-  .tl-card-title{font-size:12px;font-weight:700;}
-  .tl-card-sub{font-size:11px;color:var(--muted);}
-
-  /* SNF SETTINGS */
-  .snf-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);}
-  .snf-row:last-child{border-bottom:none;}
-  .snf-label{font-size:13px;font-weight:600;}
-  .snf-sub{font-size:11px;color:var(--muted);}
-  .snf-input{width:80px;border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:14px;font-weight:700;text-align:center;font-family:inherit;background:var(--cream);}
-  .snf-input:focus{outline:none;border-color:var(--amber);}
-
-  /* RECIPE OUTPUT */
-  .recipe-card{background:var(--surface);border-radius:14px;overflow:hidden;margin-bottom:14px;border:1.5px solid var(--border);}
-  .rh{background:var(--green);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;}
-  .rh-name{font-size:15px;font-weight:700;}
-  .rh-sub{font-size:11px;opacity:.7;margin-top:1px;}
-  .rh-copy{background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:6px 10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;}
-  .rb{padding:0 16px 12px;}
-  .section-divider{background:var(--cream);margin:0 -16px;padding:5px 16px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;}
-  .ing-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);}
-  .ing-row:last-child{border-bottom:none;}
-  .ing-name{font-size:13px;color:var(--muted);}
-  .ing-qty{font-size:15px;font-weight:700;}
-  .ing-unit{font-size:11px;color:var(--muted);margin-left:2px;}
-  .alert{padding:10px 12px;border-radius:8px;font-size:12px;margin:8px 0;}
-  .alert.warn{background:#FFF3E0;color:#E65100;border:1px solid #FFB74D;}
-  .alert.info{background:#E3F2FD;color:var(--blue);border:1px solid #90CAF9;}
-
-  /* MILK USAGE BAR */
-  .usage-bar-wrap{margin:6px 0 10px;}
-  .usage-bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px;}
-  .usage-bar-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
-  .usage-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
-
-  /* BOTTOM */
-  .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:10px 14px;display:flex;gap:8px;z-index:100;}
-  .btn{flex:1;padding:12px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
-  .btn-primary{background:var(--amber);color:#fff;}
-  .btn-secondary{background:var(--cream);color:var(--ink);border:1.5px solid var(--border);}
-  .btn-green{background:var(--green);color:#fff;}
-  .btn-wa{background:#25D366;color:#fff;}
-
-  #toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;opacity:0;transition:opacity .3s;z-index:999;white-space:nowrap;}
-  #toast.show{opacity:1;}
-  .step-banner{background:var(--green2);color:#fff;border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.6;}
-  .step-banner .sb-num{font-size:22px;font-weight:700;opacity:.5;float:right;margin-top:-2px;}
-  .step-banner .sb-title{font-size:14px;font-weight:700;margin-bottom:4px;}
-  .step-banner .sb-sub{font-size:12px;opacity:.85;}
-  .step-banner .sb-action{margin-top:8px;font-size:12px;font-weight:700;background:rgba(255,255,255,.2);border-radius:6px;padding:5px 10px;display:inline-block;}
-  .chip{display:inline-block;background:var(--cream);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:10px;color:var(--muted);margin:2px;}
-  .highlight{color:var(--amber);font-weight:700;}
+:root{
+  --green:#2e7d32;--green-d:#1b5e20;--blue:#1565c0;--amber:#b8860b;--red:#c62828;
+  --ink:#1c1c1c;--muted:#777;--border:#e2e2e2;--bg:#f4f5f2;--surface:#fff;--cream:#faf7ef;
+}
+*{box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;margin:0;padding:0 0 60px;background:var(--bg);color:var(--ink);}
+header{background:var(--green-d);color:#fff;padding:14px 16px;position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;}
+header h1{font-size:16px;margin:0;font-weight:800;letter-spacing:.3px;}
+header .ver{font-size:11px;opacity:.6;}
+.wrap{max-width:900px;margin:0 auto;padding:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.05);}
+.card h3{margin:0 0 12px;font-size:14px;color:var(--green-d);text-transform:uppercase;letter-spacing:.5px;}
+.card h3 .sub{font-size:11px;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:400;display:block;margin-top:2px;}
+label{font-size:12px;color:var(--muted);font-weight:600;}
+input,select{width:100%;padding:8px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;background:#fff;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th,td{border:1px solid var(--border);padding:4px;text-align:center;}
+th{background:var(--cream);font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);}
+td input{padding:5px;border:1px solid var(--border);text-align:center;font-size:12px;}
+.tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+button{padding:10px 16px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;}
+.btn-primary{background:var(--green);color:#fff;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-amber{background:var(--amber);color:#fff;}
+.btn-sec{background:#eee;color:var(--ink);}
+.btn-sm{padding:6px 10px;font-size:12px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+.field{margin-bottom:10px;}
+.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;}
+.chip{background:var(--cream);border:1px solid var(--border);border-radius:10px;padding:10px 12px;}
+.chip .v{font-size:18px;font-weight:800;color:var(--amber);}
+.chip .l{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-top:2px;}
+.muted{color:var(--muted);font-size:12px;}
+details summary{cursor:pointer;font-weight:700;font-size:13px;color:var(--green-d);}
+.batch-row{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--cream);}
+.batch-row .nm{flex:1;font-weight:700;font-size:13px;}
+.pill{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
+.pill.ok{background:#E8F5E9;color:var(--green-d);}
+.pill.short{background:#FFEBEE;color:var(--red);}
+.result-block{border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;}
+.result-block.short{border-color:var(--red);background:#FFF6F6;}
+.result-block h4{margin:0 0 6px;font-size:14px;}
+.ing{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;border-bottom:1px dashed var(--border);}
+.ing:last-child{border-bottom:none;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;opacity:0;transition:.3s;z-index:99;}
+.toast.show{opacity:1;}
+.warn{background:#FFF3E0;border:1px solid #FFB74D;color:#7a4a00;border-radius:8px;padding:8px 12px;font-size:12px;margin-top:8px;}
+hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.small{font-size:11px;}
 </style>
 </head>
 <body>
+<header>
+  <h1>🐄 GAAVN Production Planner</h1>
+  <span class="ver" id="ver">v1</span>
+</header>
 
-<div class="header">
-  <div class="header-logo">🧀</div>
-  <div><div class="header-title">Recipe Calculator</div><div class="header-sub">Gaavn Fresh Dairy</div></div>
-  <div class="header-date" id="hdr-date"></div>
-  <button onclick="toggleQuickMode()" id="quick-btn"
-    style="background:rgba(255,255,255,.2);border:none;border-radius:8px;padding:5px 10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;margin-left:8px;white-space:nowrap;">
-    ⚡ Quick
-  </button>
-</div>
+<div class="wrap">
 
-<div class="stepper">
-  <button class="step-btn active" id="s1" onclick="goStep(1)">1 · What to make</button>
-  <button class="step-btn" id="s2" onclick="goStep(2)">2 · Order milk</button>
-  <button class="step-btn" id="s3" onclick="goStep(3)">3 · Milk received</button>
-  <button class="step-btn" id="s4" onclick="goStep(4)">4 · Recipe</button>
-</div>
-<div id="step-guide" style="background:rgba(255,255,255,.1);margin:0;padding:8px 16px 12px;font-size:12px;color:rgba(255,255,255,.85);line-height:1.5;"></div>
-
-<!-- ══ STEP 1: DEMAND & STOCK ══ -->
-<div class="screen active" id="screen-step1">
-  <div class="step-banner">
-    <span class="sb-num">1</span>
-    <div class="sb-title">What are you making tomorrow?</div>
-    <div class="sb-sub">Enter today's closing stock and tomorrow's customer orders. The app will calculate how much milk to order from vendors.</div>
-    <span class="sb-action">👇 Fill stock + orders below, then tap Next</span>
-  </div>
-
+  <!-- 1. MILK INTAKE -->
   <div class="card">
-    <div class="card-title">⚙️ Recipe settings — change only if needed</div>
-    <div class="snf-row">
-      <div><div class="snf-label">🐃 BM ratio in paneer</div><div class="snf-sub">BM as % of (BM+SM) — data avg 20%</div></div>
-      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="bm-ratio" value="20" type="number" step="1" min="5" max="50" oninput="calcMilkNeeded()"><span style="font-size:11px;color:var(--muted);">%</span></div>
+    <h3>1 · Milk Intake <span class="sub">Buffalo (BM) &amp; Cow (CM) milk received per vendor</span></h3>
+    <div class="tbl-scroll">
+      <table id="intake-table">
+        <tr>
+          <th>Vendor</th><th>BM Qty (L)</th><th>BM Fat %</th><th>BM SNF %</th>
+          <th>CM Qty (L)</th><th>CM Fat %</th><th>CM SNF %</th>
+        </tr>
+      </table>
     </div>
-    <div class="snf-row">
-      <div><div class="snf-label">🥄 Lite Curd SNF target</div><div class="snf-sub">SM base · SMP addition</div></div>
-      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="snf-lite-curd" value="11.0" type="number" step="0.1" min="8" max="15"><span style="font-size:11px;color:var(--muted);">%</span></div>
-    </div>
-    <div class="snf-row">
-      <div><div class="snf-label">🍶 Fresh Curd SNF target</div><div class="snf-sub">CM base · SMP addition</div></div>
-      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="snf-fresh-curd" value="10.5" type="number" step="0.1" min="8" max="15"><span style="font-size:11px;color:var(--muted);">%</span></div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-sec btn-sm" onclick="addVendorRow()">+ Vendor</button>
     </div>
   </div>
 
+  <!-- 2. STANDARDS -->
   <div class="card">
-    <div class="card-title">📦 What is your stock today, and how much do customers need tomorrow?</div>
-    <div style="display:grid;grid-template-columns:auto 1fr 80px 80px;gap:6px;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--border);">
-      <div></div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;">Product</div>
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;text-align:center;">Stock<br>kg</div>
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;text-align:center;">Orders<br>kg</div>
-    </div>
-    <div id="demand-rows"></div>
+    <details id="std-details">
+      <summary>2 · Standards &amp; Targets <span class="muted">(tap to edit — these drive the mass balance)</span></summary>
+      <div style="margin-top:12px;">
+        <div class="muted" style="margin-bottom:8px;">Cream is separated from cow milk only. Confirm these against your lab numbers.</div>
+        <div class="grid3">
+          <div class="field"><label>Cream Fat %</label><input type="number" step="0.1" id="s-creamFat" value="60"></div>
+          <div class="field"><label>Cream SNF %</label><input type="number" step="0.1" id="s-creamSnf" value="4.5"></div>
+          <div class="field"><label>Milk density kg/L</label><input type="number" step="0.001" id="s-density" value="1.030"></div>
+          <div class="field"><label>Skim Fat %</label><input type="number" step="0.01" id="s-skimFat" value="0.1"></div>
+          <div class="field"><label>Skim SNF %</label><input type="number" step="0.1" id="s-skimSnf" value="8.5"></div>
+          <div class="field"><label>Curd → Chakka yield %</label><input type="number" step="1" id="s-chakka" value="50"></div>
+        </div>
+        <hr>
+        <div class="muted" style="margin-bottom:8px;">Paneer milk-mix targets (the reformulator holds these while adjusting BM / cream / skim):</div>
+        <div class="grid2">
+          <div class="field"><label>MF Paneer target Fat %</label><input type="number" step="0.01" id="s-mfFat" value="1.73"></div>
+          <div class="field"><label>MF Paneer target SNF %</label><input type="number" step="0.01" id="s-mfSnf" value="8.52"></div>
+          <div class="field"><label>Malai Paneer target Fat %</label><input type="number" step="0.01" id="s-malaiFat" value="4.96"></div>
+          <div class="field"><label>Malai Paneer target SNF %</label><input type="number" step="0.01" id="s-malaiSnf" value="8.74"></div>
+        </div>
+      </div>
+    </details>
   </div>
 
-  <div id="milk-needed-block"></div>
-
-</div>
-
-<!-- ══ STEP 2: MILK ORDER ══ -->
-<div class="screen" id="screen-step2">
-  <div class="step-banner">
-    <span class="sb-num">2</span>
-    <div class="sb-title">Order milk from vendors</div>
-    <div class="sb-sub">Enter V1's expected quantity and today's fat/SNF reading. The app calculates exactly how much to order from V2 (Yogesh) and V3 (MM). Call vendors before 8 AM.</div>
-    <span class="sb-action">👇 Enter V1 readings → see order quantities below</span>
-  </div>
-
+  <!-- 3. DAY PLAN -->
   <div class="card">
-    <div class="card-title">🏠 Vendor 1 (Dipak) — village milk, arrives automatically</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">You don't order from V1 — they deliver whatever the village produces. Enter today's expected quantity and quality (check yesterday's reading as a reference).</div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:4px;">Morning (9:30 AM)</div>
-    <div class="field-row c3">
-      <div class="field"><label>CM (L)</label><input type="number" id="v1-cm-morn" placeholder="84" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM Fat %</label><input type="number" id="v1-cm-morn-fat" placeholder="3.5" step="0.1" value="3.5" min="0" max="10" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM SNF %</label><input type="number" id="v1-cm-morn-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
+    <h3>3 · Day Plan <span class="sub">Add the products &amp; quantities you want to make today</span></h3>
+    <div class="grid3" style="align-items:end;">
+      <div class="field"><label>Product</label><select id="plan-product"></select></div>
+      <div class="field"><label>Total output</label><input type="number" id="plan-qty" placeholder="e.g. 100"></div>
+      <div class="field"><button class="btn-primary" style="width:100%;" onclick="addBatch()">+ Add to plan</button></div>
     </div>
-    <div class="field-row c3">
-      <div class="field"><label>BM (L)</label><input type="number" id="v1-bm-morn" placeholder="8" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>BM Fat %</label><input type="number" id="v1-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>BM SNF %</label><input type="number" id="v1-bm-snf" placeholder="9.0" step="0.1" value="9.0" min="0" oninput="calcMilkOrder()"></div>
+    <div id="batch-list"></div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-blue" onclick="runPlan()">▶ Run Production Plan</button>
+      <button class="btn-sec btn-sm" onclick="clearPlan()">Clear plan</button>
     </div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 4px;">Evening (mixed with morning)</div>
-    <div class="field-row c3">
-      <div class="field"><label>CM (L)</label><input type="number" id="v1-cm-eve" placeholder="32" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM Fat %</label><input type="number" id="v1-cm-eve-fat" placeholder="3.3" step="0.1" value="3.3" min="0" max="10" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM SNF %</label><input type="number" id="v1-cm-eve-snf" placeholder="8.3" step="0.1" value="8.3" min="0" oninput="calcMilkOrder()"></div>
-    </div>
+    <div class="muted small" style="margin-top:8px;">Factory priority is fixed: <b>reserve Khoya CM → separate cream → Paneer → Curd → Chaas/Lassi/Shrikhand</b>, regardless of add order.</div>
   </div>
 
-  <div class="card">
-    <div class="card-title">🏪 Vendor 2 (Yogesh) — call to order BM + CM if needed</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">App calculates quantities needed below. Enter fat/SNF for accurate recipe. Max: 480L CM · 160L BM.</div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;">Expected quantity (app-calculated — override if Yogesh confirms different)</div>
-    <div class="field-row c2">
-      <div class="field"><label>BM to order (L)</label><input type="number" id="v2-bm-expected" placeholder="auto" step="10" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM to order (L)</label><input type="number" id="v2-cm-expected" placeholder="auto" step="10" min="0" oninput="calcMilkOrder()"></div>
-    </div>
-    <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:8px 0 6px;">Quality (today's reading)</div>
-    <div class="field-row c2">
-      <div class="field"><label>BM fat %</label><input type="number" id="v2-bm-fat" placeholder="6.5" step="0.1" value="6.5" min="0" max="10" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM fat %</label><input type="number" id="v2-cm-fat" placeholder="4.0" step="0.1" value="4.0" min="0" max="10" oninput="calcMilkOrder()"></div>
-    </div>
-    <div class="field-row c2">
-      <div class="field"><label>BM SNF %</label><input type="number" id="v2-bm-snf" placeholder="9.0" step="0.1" value="9.0" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>CM SNF %</label><input type="number" id="v2-cm-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🥛 Vendor 3 (MM) — call to order Skim Milk</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">The app calculates how much SM to order after accounting for SM produced by the cream separator.</div>
-    <div class="field-row c2">
-      <div class="field"><label>SM fat %</label><input type="number" id="v3-sm-fat" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>SM SNF %</label><input type="number" id="v3-sm-snf" placeholder="8.5" step="0.1" value="8.5" min="0" oninput="calcMilkOrder()"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🫙 Cream separator — typical output settings</div>
-    <div class="field-row c2">
-      <div class="field"><label>Cream fat % output</label><input type="number" id="v4-cream-fat" placeholder="60" step="1" value="60" min="0" max="100" oninput="calcMilkOrder()"></div>
-      <div class="field"><label>SM fat % after skim</label><input type="number" id="v4-sm-fat-after" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcMilkOrder()"></div>
-    </div>
-  </div>
-
-  <div id="order-recommendation-block"></div>
+  <!-- 4. RESULTS -->
+  <div id="results"></div>
 
 </div>
 
-<!-- ══ STEP 3: MILK INPUT (was Step 2) ══ -->
-<!-- ══ STEP 3: MILK INPUT ══ -->
-<div class="screen" id="screen-step3">
-  <div class="step-banner">
-    <span class="sb-num">3</span>
-    <div class="sb-title">Milk received — confirm actuals</div>
-    <div class="sb-sub">Fields are pre-filled from your order. Correct anything that arrived differently — different quantity, fat% or SNF% than expected. This gives the accurate recipe.</div>
-    <span class="sb-action">👇 Check and correct actual quantities received</span>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🐃 Buffalo Milk received — V1 morning + V2</div>
-    <div class="vendor-block">
-      <div class="vendor-header">
-        <span class="vtag bm">V1</span><span class="vname">Vendor 1</span>
-        <span class="vtime">🕘 9:30 AM</span>
-      </div>
-      <div class="field-row c3">
-        <div class="field"><label>Volume (L)</label><input type="number" id="bm1-vol" placeholder="0" min="0" oninput="onMilkChange()"></div>
-        <div class="field"><label>Fat %</label><input type="number" id="bm1-fat" placeholder="6.5" step="0.1" min="0" max="10" oninput="onMilkChange()"></div>
-        <div class="field"><label>SNF %</label><input type="number" id="bm1-snf" placeholder="9.0" step="0.1" oninput="onMilkChange()"></div>
-      </div>
-    </div>
-    <div class="vendor-block">
-      <div class="vendor-header">
-        <span class="vtag bm">V2</span><span class="vname">Vendor 2</span>
-        <span class="vtime">🕐 1:00 PM</span>
-      </div>
-      <div class="field-row c3">
-        <div class="field"><label>Volume (L)</label><input type="number" id="bm2-vol" placeholder="0" min="0" oninput="onMilkChange()"></div>
-        <div class="field"><label>Fat %</label><input type="number" id="bm2-fat" placeholder="6.5" step="0.1" min="0" max="10" oninput="onMilkChange()"></div>
-        <div class="field"><label>SNF %</label><input type="number" id="bm2-snf" placeholder="9.0" step="0.1" oninput="onMilkChange()"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🐄 Cow Milk received — V1 morning + V2 (if ordered)</div>
-    <div class="vendor-block">
-      <div class="vendor-header">
-        <span class="vtag cm">V1</span><span class="vname">Vendor 1</span>
-        <span class="vtime">🕙 11:00 AM</span>
-      </div>
-      <div class="field-row c3">
-        <div class="field"><label>Volume (L)</label><input type="number" id="cm1-vol" placeholder="0" min="0" oninput="onMilkChange()"></div>
-        <div class="field"><label>Fat %</label><input type="number" id="cm1-fat" placeholder="4.0" step="0.1" min="0" max="10" oninput="onMilkChange()"></div>
-        <div class="field"><label>SNF %</label><input type="number" id="cm1-snf" placeholder="8.5" step="0.1" oninput="onMilkChange()"></div>
-      </div>
-    </div>
-    <div class="vendor-block">
-      <div class="vendor-header">
-        <span class="vtag cm">V2</span><span class="vname">Vendor 2</span>
-        <span class="vtime">🕐 1:00 PM</span>
-      </div>
-      <div class="field-row c3">
-        <div class="field"><label>Volume (L)</label><input type="number" id="cm2-vol" placeholder="0" min="0" oninput="onMilkChange()"></div>
-        <div class="field"><label>Fat %</label><input type="number" id="cm2-fat" placeholder="4.0" step="0.1" min="0" max="10" oninput="onMilkChange()"></div>
-        <div class="field"><label>SNF %</label><input type="number" id="cm2-snf" placeholder="8.5" step="0.1" oninput="onMilkChange()"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🥛 Skim Milk (SM) · Vendor 3</div>
-    <div class="vendor-block">
-      <div class="vendor-header">
-        <span class="vtag sm">SM</span><span class="vname">Vendor 3</span>
-        <span class="vtime">🕐 1:00 PM+</span>
-      </div>
-      <div class="field-row c3">
-        <div class="field"><label>Volume (L)</label><input type="number" id="sm-vol" placeholder="0" min="0" oninput="onMilkChange()"></div>
-        <div class="field"><label>Fat %</label><input type="number" id="sm-fat" placeholder="0.1" step="0.01" value="0.1" min="0" max="1" oninput="onMilkChange()"></div>
-        <div class="field"><label>SNF %</label><input type="number" id="sm-snf" placeholder="8.5" step="0.1" oninput="onMilkChange()"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🫙 Cream Separator (from CM)</div>
-    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;">Cream is separated from today's CM. Enter how much CM will be skimmed.</div>
-    <div class="field-row c2">
-      <div class="field"><label>CM to skim (L)</label><input type="number" id="cm-to-skim" placeholder="0" step="1" min="0" oninput="calcSeparator()"></div>
-      <div class="field"><label>CM fat % (input)</label><input type="number" id="cm-skim-fat" placeholder="4.0" step="0.1" min="0" oninput="calcSeparator()"></div>
-    </div>
-    <div class="field-row c2">
-      <div class="field"><label>Cream fat %</label><input type="number" id="cream-fat" placeholder="60" step="1" value="60" min="0" max="100" oninput="calcSeparator()"></div>
-      <div class="field"><label>SM fat after skim %</label><input type="number" id="sm-fat-after" placeholder="0.1" step="0.01" value="0.1" min="0" oninput="calcSeparator()"></div>
-    </div>
-    <div id="separator-output" style="background:var(--cream);border-radius:10px;padding:10px;margin-top:8px;font-size:12px;display:none;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-        <span style="color:var(--muted);">Cream produced</span>
-        <span id="sep-cream-out" style="font-weight:700;color:var(--amber);">— kg</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-        <span style="color:var(--muted);">SM produced</span>
-        <span id="sep-sm-out" style="font-weight:700;color:var(--blue);">— L</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;">
-        <span style="color:var(--muted);">Extra CM needed (if short)</span>
-        <span id="sep-extra-cm" style="font-weight:700;color:var(--red);">—</span>
-      </div>
-    </div>
-    <div class="field-row c2" style="margin-top:10px;">
-      <div class="field"><label>Actual cream avail (kg)</label><input type="number" id="cream-kg" placeholder="0" step="0.1" min="0" oninput="onMilkChange()"></div>
-      <div class="field"><label>SM from separator (L)</label><input type="number" id="sm-sep-vol" placeholder="0" step="1" min="0" oninput="onMilkChange()"></div>
-    </div>
-    <div class="field-row c2">
-      <div class="field"><label>SM sep SNF %</label><input type="number" id="sm-sep-snf" placeholder="9.0" step="0.1" min="0"></div>
-    </div>
-  </div>
-
-  <div id="milk-vs-need-block"></div>
-
-</div>
-
-<!-- ══ STEP 4: PRODUCTION SCHEDULE ══ -->
-<div class="screen" id="screen-step4">
-  <div class="step-banner">
-    <span class="sb-num">4</span>
-    <div class="sb-title">Production schedule</div>
-    <div class="sb-sub">Paneer starts after 9:30 AM (V1 BM in hand). Curd and Khoya start after 1 PM when all milk is received.</div>
-  </div>
-  <div class="card">
-    <div class="card-title">🕐 Production Schedule by Milk Arrival</div>
-    <div id="schedule-block"></div>
-  </div>
-  <div class="card">
-    <div class="card-title">📊 Milk Availability vs Requirement</div>
-    <div id="milk-balance-block"></div>
-  </div>
-</div>
-
-<!-- ══ STEP 5: RECIPE OUTPUT ══ -->
-<div class="screen" id="screen-step4">
-  <div class="step-banner">
-    <span class="sb-num">5</span>
-    <div class="sb-title">Recipe — send to production group</div>
-    <div class="sb-sub">Tap Copy All to send the full recipe to the plant WhatsApp group. Each product can be copied individually too.</div>
-    <span class="sb-action">📲 Tap Copy All → paste in WhatsApp</span>
-  </div>
-  <div id="recipe-output"></div>
-</div>
-
-<div class="bottom-bar" id="bottom-bar">
-  <button class="btn btn-secondary" id="btn-back" onclick="prevStep()" style="display:none">← Back</button>
-  <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Next →</button>
-</div>
-<div id="quick-recipe-screen" style="display:none;padding:14px 14px 110px;">
-  <div class="step-banner" style="background:#1565C0;">
-    <div class="sb-title">⚡ Quick Recipe</div>
-    <div class="sb-sub">I know my milk quantities. Skip ordering — give me the recipe directly.</div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🥛 Milk in the plant today</div>
-    <div class="field-row c3">
-      <div class="field"><label>BM (L)</label><input type="number" id="qr-bm-vol" placeholder="120" min="0" oninput="calcQuickRecipe()"></div>
-      <div class="field"><label>BM fat %</label><input type="number" id="qr-bm-fat" placeholder="6.5" step="0.1" value="6.5" oninput="calcQuickRecipe()"></div>
-      <div class="field"><label>BM SNF %</label><input type="number" id="qr-bm-snf" placeholder="9.0" step="0.1" value="9.0" oninput="calcQuickRecipe()"></div>
-    </div>
-    <div class="field-row c3">
-      <div class="field"><label>CM (L)</label><input type="number" id="qr-cm-vol" placeholder="0" min="0" oninput="calcQuickRecipe()"></div>
-      <div class="field"><label>CM fat %</label><input type="number" id="qr-cm-fat" placeholder="4.0" step="0.1" value="4.0" oninput="calcQuickRecipe()"></div>
-      <div class="field"><label>CM SNF %</label><input type="number" id="qr-cm-snf" placeholder="8.5" step="0.1" value="8.5" oninput="calcQuickRecipe()"></div>
-    </div>
-    <div class="field-row c3">
-      <div class="field"><label>SM (L)</label><input type="number" id="qr-sm-vol" placeholder="500" min="0" oninput="calcQuickRecipe()"></div>
-      <div class="field"><label>SM fat %</label><input type="number" id="qr-sm-fat" placeholder="0.1" step="0.01" value="0.1" oninput="calcQuickRecipe()"></div>
-      <div class="field"><label>SM SNF %</label><input type="number" id="qr-sm-snf" placeholder="8.5" step="0.1" value="8.5" oninput="calcQuickRecipe()"></div>
-    </div>
-    <div class="field-row c2" style="margin-top:4px;">
-      <div class="field"><label>Cream available (kg)</label><input type="number" id="qr-cream-kg" placeholder="0" step="0.1" min="0" oninput="calcQuickRecipe()"></div>
-      <div class="field"><label>Cream fat %</label><input type="number" id="qr-cream-fat" placeholder="60" step="1" value="60" oninput="calcQuickRecipe()"></div>
-    </div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">🧀 What to make (batch size in litres)</div>
-    <div id="qr-product-rows"></div>
-  </div>
-
-  <div class="card">
-    <div class="card-title">⚙️ Settings</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
-      <div><div style="font-size:13px;font-weight:600;">BM ratio in paneer</div><div style="font-size:11px;color:var(--muted);">% of batch that should be BM</div></div>
-      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="qr-bm-ratio" value="20" type="number" step="1" min="5" max="50" oninput="calcQuickRecipe()"><span style="font-size:11px;color:var(--muted);">%</span></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);">
-      <div><div style="font-size:13px;font-weight:600;">Lite Curd SNF target</div></div>
-      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="qr-snf-curd-lite" value="11.5" type="number" step="0.1" min="8" max="15" oninput="calcQuickRecipe()"><span style="font-size:11px;color:var(--muted);">%</span></div>
-    </div>
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;">
-      <div><div style="font-size:13px;font-weight:600;">Fresh Curd SNF target</div></div>
-      <div style="display:flex;align-items:center;gap:4px;"><input class="snf-input" id="qr-snf-curd-fresh" value="10.5" type="number" step="0.1" min="8" max="15" oninput="calcQuickRecipe()"><span style="font-size:11px;color:var(--muted);">%</span></div>
-    </div>
-  </div>
-
-  <div id="qr-recipe-output"></div>
-
-  <div style="display:flex;gap:8px;margin-bottom:14px;">
-    <button onclick="copyQuickAll()" class="btn btn-wa" style="flex:1;">📲 Copy All for WhatsApp</button>
-  </div>
-</div>
-
-<div id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
-// ══ CONSTANTS ══
-const TODAY_STR = new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short'});
-document.getElementById('hdr-date').textContent = TODAY_STR;
+// ══════════════════════════════════════════════════════════════════════
+// GAAVN PRODUCTION PLANNER — single daily milk pool with fat/SNF mass balance
+// Sequence: reserve CM for Khoya → separate cream from remaining CM →
+//           Paneer (auto-reformulated) → Curd → curd-derived → excess cream→ghee
+// ══════════════════════════════════════════════════════════════════════
+var LS='gaavn_planner_v1';
+var VENDORS=5;
 
-// Yield: kg product per litre of (BM+SM) milk
-// Paneer 15.2% validated from 30 days May data; curd ~95% of SM; others estimated
-const YIELD = {
-  paneer_lite:0.120, paneer_med:0.152, paneer_malai:0.180,
-  khoya_cm:0.220, khoya_std:0.180,
-  curd_lite:0.950, curd_fresh:0.950,
-  lassi:1.200, chaas:1.300
+// ---- Product definitions (your recipe formats preserved) --------------
+// type: paneer | curd | curd-derived | khoya
+// nominalMix (paneer): dairy streams per nominal output (used for mix mass only;
+//   actual BM/SM/Cream are re-solved to hit the fat/SNF target).
+// consumes: fixed inputs scaled by output. Keys map to pools/inventory:
+//   BM, SM(skim), CM, Cream, Curd, Chakka + purchased(SMP,CaCl2,AA,PS,Binder,Syrup,Pulp,Sugar,Water)
+var PRODUCTS={
+ "Medium Fat Paneer":{output:100,unit:"kg",type:"paneer",targetKey:"mf",
+    nominalMix:{BM:100,SM:595,Cream:8.74},
+    additives:{PS:0.291,CaCl2:0.417,AA:695,Water:139},additiveUnits:{PS:"kg",CaCl2:"kg",AA:"ml",Water:"L"}},
+ "Malai Paneer":{output:14,unit:"kg",type:"paneer",targetKey:"malai",
+    nominalMix:{BM:25,SM:15,Cream:0.645},
+    additives:{PS:0.0168,CaCl2:0.024},additiveUnits:{PS:"kg",CaCl2:"kg"}},
+ "Lite Curd":{output:100,unit:"kg",type:"curd",produces:"Curd",
+    consumes:{SM:100},additives:{SMP:2.6,Binder:10,CaCl2:0.03},additiveUnits:{SMP:"kg",Binder:"gm",CaCl2:"kg"}},
+ "CM Khoya":{output:20,unit:"kg",type:"khoya",
+    consumes:{CM:49,SM:11},additives:{SMP:2},additiveUnits:{SMP:"kg"}},
+ "Chaas":{output:50,unit:"L",type:"curd-derived",
+    consumes:{Curd:19},additives:{Water:33},additiveUnits:{Water:"L"}},
+ "Sweet Lassi":{output:20,unit:"kg",type:"curd-derived",
+    consumes:{Curd:19},additives:{Syrup:7.98},additiveUnits:{Syrup:"kg"}},
+ "Mango Lassi":{output:20,unit:"kg",type:"curd-derived",
+    consumes:{Curd:15},additives:{Syrup:6.3,Pulp:0.852},additiveUnits:{Syrup:"kg",Pulp:"kg"}},
+ "Shrikhand":{output:20,unit:"kg",type:"curd-derived",usesChakka:true,
+    consumes:{Chakka:13.2},additives:{Sugar:9.9},additiveUnits:{Sugar:"kg"}}
 };
+// Fixed factory priority
+var PRIORITY=["CM Khoya","Medium Fat Paneer","Malai Paneer","Lite Curd","Chaas","Sweet Lassi","Mango Lassi","Shrikhand"];
 
-// Products master
-const PRODUCTS = [
-  // Medium Paneer: target 1.7% fat in vat (BM+SM+cream+water)
-  // Cream (62% fat) added to balance if blended BM+SM fat < 1.7%
-  // If blended fat >= 1.5% (good milk day) → only 0.2% top-up with cream
-  // Ingredients per litre of (BM+SM): AA=1ml, Water=0.2L, PS=0.42g, CaCl2=0.6g
-  // Yield: 15.2% of (BM+SM) milk
-  {id:'paneer_med',   name:'Medium Paneer', icon:'🧀', fat:1.70, targetFat:1.70, goodMilkFat:1.50,
-   milkBase:'BM_SM', group:'paneer', yieldPct:15.2,
-   coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
-  {id:'paneer_lite',  name:'Lite Paneer',   icon:'🥛', fat:0.75, targetFat:0.75, goodMilkFat:0.75,
-   milkBase:'BM_SM', group:'paneer', yieldPct:12.0,
-   coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
-  {id:'paneer_malai', name:'Malai Paneer',  icon:'🧈', fat:4.50, targetFat:4.50, goodMilkFat:4.50,
-   milkBase:'BM_SM', group:'paneer', yieldPct:18.0,
-   coag:[{n:'CaCl₂',per:0.6,u:'g/L'},{n:'Citric Acid',per:1.0,u:'ml/L'},{n:'PS',per:0.42,u:'g/L'},{n:'Water',per:0.20,u:'L/L'}]},
-  // Khoya: just milk reduction, no additives tracked here
-  {id:'khoya_cm',     name:'Khoya CM',      icon:'🍮', fat:3.0, milkBase:'CM', group:'khoya', yieldPct:22.0, coag:[]},
-  {id:'khoya_std',    name:'Khoya STD',     icon:'🟤', fat:1.5, milkBase:'CM_SM', group:'khoya', yieldPct:18.0, coag:[]},
-  // Lite Curd: SM standardised to SNF 11% + fat 0.5% = TS 11.5%
-  // SMP added to bring SM SNF to 11%. Yield ~95% of SM
-  {id:'curd_lite',    name:'Lite Curd',     icon:'🥄', fat:0.1, milkBase:'SM', group:'curd', yieldPct:95.0,
-   targetSnf:11.0, targetTS:11.5,
-   coag:[{n:'Culture',per:2.0,u:'g/L'},{n:'Binder',per:0.1,u:'g/L'},{n:'CaCl₂',per:0.3,u:'g/L'}]},
-  {id:'curd_fresh',   name:'Fresh Curd',    icon:'🍶', fat:3.0, milkBase:'CM', group:'curd', yieldPct:95.0,
-   coag:[{n:'Culture',per:2.0,u:'g/L'}]},
-  {id:'lassi',        name:'Lassi',         icon:'🥤', fat:3.0, milkBase:'CM', group:'lassi', yieldPct:120.0,
-   fromCurd:'curd_fresh', coag:[{n:'Sugar',per:80,u:'g/L'},{n:'Water',per:0.3,u:'L/L'}]},
-  {id:'chaas',        name:'Chaas',         icon:'🧉', fat:3.0, milkBase:'CM', group:'chaas', yieldPct:130.0,
-   fromCurd:'curd_fresh', coag:[{n:'Salt',per:5,u:'g/L'},{n:'Water',per:0.5,u:'L/L'},{n:'Jeera',per:1,u:'g/L'}]},
-];
+var STATE={intake:[],plan:[],batches:[]};
 
-// Cream fat% for balancing (per user: 62%)
-const CREAM_FAT_DEFAULT = 62;
-
-// Arrival windows
-const ARRIVAL = {
-  bm1:'09:30', cm1:'11:00', bm2:'13:00', cm2:'13:00', sm:'13:00+'
-};
-
-// Which products can start with early milk (BM1 + CM1 arrive by 11am)
-const EARLY_PRODUCTS = ['paneer_lite','paneer_med','paneer_malai']; // use BM
-const MID_PRODUCTS   = ['khoya_cm','khoya_std','curd_lite','curd_fresh','lassi','chaas']; // use CM/SM
-
-// State
-let STATE = {
-  demand:{}, stock:{},
-  batchVol:{},
-  snfTargets:{ curd_lite:11.5, curd_fresh:10.5 },
-  recipes:[], pool:null
-};
-
-// ══ STEP 1: DEMAND ROWS ══
-function renderDemandRows() {
-  let html = '';
-  PRODUCTS.forEach(p => {
-    const stk = STATE.stock[p.id]||'';
-    const dem = STATE.demand[p.id]||'';
-    html += `<div class="product-row">
-      <div class="pr-icon">${p.icon}</div>
-      <div class="pr-info"><div class="pr-name">${p.name}</div><div class="pr-sub">${p.fat}% fat · ${p.milkBase}</div></div>
-      <div>
-        <input class="pr-input" type="number" id="stk-${p.id}" value="${stk}" placeholder="0" min="0"
-               oninput="STATE.stock['${p.id}']=parseFloat(this.value)||0; calcMilkNeeded()">
-        <div class="pr-label">stock kg</div>
-      </div>
-      <div>
-        <input class="pr-input" type="number" id="dem-${p.id}" value="${dem}" placeholder="0" min="0"
-               oninput="STATE.demand['${p.id}']=parseFloat(this.value)||0; calcMilkNeeded()">
-        <div class="pr-label">order kg</div>
-      </div>
-    </div>`;
-  });
-  document.getElementById('demand-rows').innerHTML = html;
-}
-
-function calcMilkNeeded() {
-  let bmNeeded=0, cmNeeded=0, smNeeded=0;
-  const breakdown = [];
-
-  PRODUCTS.forEach(p => {
-    const dem = parseFloat(document.getElementById('dem-'+p.id)?.value)||0;
-    const stk = parseFloat(document.getElementById('stk-'+p.id)?.value)||0;
-    const produce = Math.max(0, dem - stk);
-    if(produce <= 0) return;
-
-    const milkL = produce / (YIELD[p.id] || 0.15);
-    let bm=0, cm=0, sm=0;
-
-    if(p.milkBase === 'BM_SM') {
-      // BM is a quality ratio (~20% of batch), SM fills rest — consistent across all paneer variants
-      const bmRatio = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
-      bm = milkL * bmRatio; sm = milkL * (1 - bmRatio);
-    } else if(p.milkBase === 'CM') { cm = milkL; }
-    else if(p.milkBase === 'SM')  { sm = milkL; }
-    else if(p.milkBase === 'CM_SM') { sm = milkL*0.5; cm = milkL*0.5; }
-
-    bmNeeded += bm; cmNeeded += cm; smNeeded += sm;
-    breakdown.push({p, produce, milkL, bm, cm, sm});
-  });
-
-  STATE.batchVol = {};
-  breakdown.forEach(b => { STATE.batchVol[b.p.id] = Math.ceil(b.milkL/50)*50; });
-
-  if(breakdown.length === 0) {
-    document.getElementById('milk-needed-block').innerHTML = '';
-    return;
-  }
-
-  const total = bmNeeded + cmNeeded + smNeeded;
-  let html = `<div class="need-card">
-    <div class="need-title">🥛 Approximate Milk Required</div>`;
-  breakdown.forEach(b => {
-    html += `<div class="need-row">
-      <span class="need-label">${b.p.icon} ${b.p.name} <span style="font-size:10px">(produce ${b.produce.toFixed(1)}kg)</span></span>
-      <span class="need-value">${b.milkL.toFixed(0)}L</span>
-    </div>`;
-  });
-  html += `<div class="need-total">
-    <div>
-      <div class="t-label">Total milk needed</div>
-      <div style="font-size:11px;opacity:.8">BM ~${bmNeeded.toFixed(0)}L · CM ~${cmNeeded.toFixed(0)}L · SM ~${smNeeded.toFixed(0)}L</div>
-    </div>
-    <div class="t-value">${total.toFixed(0)} L</div>
-  </div></div>`;
-  document.getElementById('milk-needed-block').innerHTML = html;
-}
-
-// ══ STEP 2: MILK POOL ══
-function getMilkPool() {
-  const g = id => parseFloat(document.getElementById(id)?.value)||0;
-  const bm1v=g('bm1-vol'), bm1f=g('bm1-fat')||6.5, bm1s=g('bm1-snf')||9.0;
-  const bm2v=g('bm2-vol'), bm2f=g('bm2-fat')||6.5, bm2s=g('bm2-snf')||9.0;
-  const cm1v=g('cm1-vol'), cm1f=g('cm1-fat')||4.0, cm1s=g('cm1-snf')||8.5;
-  const cm2v=g('cm2-vol'), cm2f=g('cm2-fat')||4.0, cm2s=g('cm2-snf')||8.5;
-  const smv =g('sm-vol'),  smf =g('sm-fat')||0.1,  sms =g('sm-snf')||8.5;
-  const smSepV=g('sm-sep-vol'), smSepS=g('sm-sep-snf')||9.0;
-
-  const bmVol=bm1v+bm2v;
-  const bmFat=bmVol>0?(bm1v*bm1f+bm2v*bm2f)/bmVol:6.5;
-  const bmSnf=bmVol>0?(bm1v*bm1s+bm2v*bm2s)/bmVol:9.0;
-  const cm1Vol=cm1v, cm2Vol=cm2v, cmVol=cm1v+cm2v;
-  const cmFat=cmVol>0?(cm1v*cm1f+cm2v*cm2f)/cmVol:4.0;
-  const cmSnf=cmVol>0?(cm1v*cm1s+cm2v*cm2s)/cmVol:8.5;
-  // Total SM = vendor SM + separator SM
-  const totalSmVol=smv+smSepV;
-  const totalSmSnf=totalSmVol>0?((smv*(sms||8.5)+smSepV*(smSepS||9.0))/totalSmVol):8.5;
-
+// ---- helpers ----------------------------------------------------------
+function $(id){return document.getElementById(id);}
+function num(id){var v=parseFloat($(id).value);return isNaN(v)?0:v;}
+function r2(n){return Math.round((n+Number.EPSILON)*100)/100;}
+function r3(n){return Math.round((n+Number.EPSILON)*1000)/1000;}
+function fmt(n){return (Math.round((n+Number.EPSILON)*100)/100).toLocaleString('en-IN');}
+function toast(m){var t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},1800);}
+function std(){
   return {
-    bmVol, bmFat, bmSnf,
-    cm1Vol, cm2Vol, cmVol, cmFat, cmSnf,
-    smVol:totalSmVol, smFat:smf, smSnf:totalSmSnf,
-    bm1Vol:bm1v, bm2Vol:bm2v,
-    creamKg:g('cream-kg')
+    creamFat:num('s-creamFat'),creamSnf:num('s-creamSnf'),density:num('s-density')||1.03,
+    skimFat:num('s-skimFat'),skimSnf:num('s-skimSnf'),chakka:(num('s-chakka')||50)/100,
+    mf:{fat:num('s-mfFat'),snf:num('s-mfSnf')},
+    malai:{fat:num('s-malaiFat'),snf:num('s-malaiSnf')}
   };
 }
 
-// ══ MILK ORDER CALCULATOR ══
-function calcMilkOrder() {
-  const g = id => parseFloat(document.getElementById(id)?.value)||0;
-
-  // V1 natural supply — morning and evening blended by volume-weighted average
-  const v1CmMornVol = g('v1-cm-morn');
-  const v1CmEveVol  = g('v1-cm-eve');
-  const v1CmVol     = v1CmMornVol + v1CmEveVol;
-  const v1BmVol     = g('v1-bm-morn');
-  // Blended CM fat and SNF (volume-weighted)
-  const v1CmMornFat = g('v1-cm-morn-fat')||3.5;
-  const v1CmMornSnf = g('v1-cm-morn-snf')||8.5;
-  const v1CmEveFat  = g('v1-cm-eve-fat')||3.3;
-  const v1CmEveSnf  = g('v1-cm-eve-snf')||8.3;
-  const v1CmFat = v1CmVol > 0
-    ? (v1CmMornVol*v1CmMornFat + v1CmEveVol*v1CmEveFat) / v1CmVol
-    : 3.5;
-  const v1CmSnf = v1CmVol > 0
-    ? (v1CmMornVol*v1CmMornSnf + v1CmEveVol*v1CmEveSnf) / v1CmVol
-    : 8.5;
-  const v1BmFat  = g('v1-bm-fat')||6.5;
-  const v1BmSnf  = g('v1-bm-snf')||9.0;
-  const v1Snf    = v1CmSnf; // for backward compat
-
-  // Separator params
-  const creamFatPct  = g('v4-cream-fat')||60;
-  const smFatAfter   = g('v4-sm-fat-after')||0.1;
-  const creamFatFrac = creamFatPct/100;
-  const smFatFrac    = smFatAfter/100;
-
-  // V2 & V3 params
-  const v2CmFat  = g('v2-cm-fat')||4.0;
-  const v2BmFat  = g('v2-bm-fat')||6.5;
-  const v2CmSnf  = g('v2-cm-snf')||8.5;
-  const v2BmSnf  = g('v2-bm-snf')||9.0;
-  const v3SmFat  = g('v3-sm-fat')||0.1;
-  const v3SmSnf  = g('v3-sm-snf')||8.5;
-
-  const V2_MAX_CM=480, V2_MAX_BM=160, V3_MAX_SM=2000;
-
-  // ── How much cream does V1 CM produce when fully skimmed? ──
-  // Fat balance: vol*cmFat = cream_kg*creamFat + sm_vol*smFat
-  // Mass balance: vol*1.028 = cream_kg + sm_vol*1.032
-  const v1CmMass = v1CmVol * 1.028;
-  const A = creamFatFrac - smFatFrac/1.032;
-  const B = v1CmVol*(v1CmFat/100) - v1CmMass*smFatFrac/1.032;
-  const creamFromV1 = v1CmVol>0 ? Math.max(0, B/A) : 0;
-  const smFromV1    = v1CmVol>0 ? Math.max(0, (v1CmMass - creamFromV1)/1.032) : 0;
-
-  // ── Calculate milk needed for each product ──
-  // If Step 1 hasn't been filled yet, derive batch volumes from demand inputs directly
-  if(Object.keys(STATE.batchVol||{}).length === 0) calcMilkNeeded();
-
-  let bmNeeded=0, smNeeded=0, creamNeeded=0;
-  const breakdown=[];
-
-  PRODUCTS.forEach(p => {
-    const vol = STATE.batchVol[p.id]||0;
-    if(vol===0) return;
-    let bm=0, cm=0, sm=0, cream=0;
-
-    if(p.milkBase==='BM_SM') {
-      // BM is a quality ratio (~20% of batch), not limited to V1 supply
-      // V2 BM is ordered to make up the difference
-      const bmRatio = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
-      bm = vol * bmRatio;
-      sm = vol * (1 - bmRatio);
-      // Blended BM fat (V1 natural + V2 ordered to fill gap)
-      const bmFromV1 = Math.min(v1BmVol, bm);
-      const bmFromV2 = Math.max(0, bm - bmFromV1);
-      const blendedBmFat = bm > 0
-        ? (bmFromV1*v1BmFat + bmFromV2*(v2BmFat||v1BmFat)) / bm
-        : (v1BmFat||6.5);
-      const fatFromMilk = bm*(blendedBmFat/100) + sm*(v3SmFat/100);
-      const fatNeeded   = vol*1.032*(p.fat/100);
-      cream = Math.max(0, (fatNeeded-fatFromMilk)/creamFatFrac);
-      bmNeeded+=bm; smNeeded+=sm; creamNeeded+=cream;
-    } else if(p.milkBase==='CM') {
-      cm=vol;
-    } else if(p.milkBase==='SM') {
-      sm=vol; smNeeded+=sm;
-    } else if(p.milkBase==='CM_SM') {
-      // Khoya STD: blend CM+SM
-      const b = (vol*(p.fat/100 - smFatFrac)) / ((v2CmFat/100) - smFatFrac);
-      cm=Math.min(vol,b); sm=vol-cm; smNeeded+=sm;
-    }
-    breakdown.push({p, vol, bm, cm, sm, cream});
-  });
-
-  // ── BM gap — V2 BM ordered to reach quality ratio target ──
-  const bmRatioPct = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
-  const bmGap = Math.max(0, bmNeeded - v1BmVol);
-  const bmCalc = Math.min(Math.ceil(bmGap/10)*10, V2_MAX_BM);
-  // Use manual override if operator entered it
-  const v2BmOverride = parseFloat(document.getElementById('v2-bm-expected')?.value);
-  const v2BmOrder = !isNaN(v2BmOverride) && v2BmOverride >= 0 ? v2BmOverride : bmCalc;
-
-  // ── How much cream is needed and how much CM to skim ──
-  // Cream fat = 62% (plant standard)
-  // Back-calculate CM needed to produce required cream
-  // cream_kg = cm_vol * (cm_fat - sm_fat) / (cream_fat - sm_fat)
-  // cm_vol_for_cream = creamNeeded / ((cm_fat - sm_fat) / (cream_fat - sm_fat))
-  const creamDeficit = Math.max(0, creamNeeded - creamFromV1);
-  let v2CmForCream = 0;
-  let smFromV2Cm = 0;
-  if(creamDeficit > 0) {
-    const v2CmMassPerL = 1.028;
-    const Av2 = creamFatFrac - smFatFrac/1.032;
-    const Bv2PerL = (v2CmFat/100) - v2CmMassPerL*smFatFrac/1.032;
-    const creamPerLv2 = Bv2PerL / Av2; // kg cream per litre CM skimmed
-    v2CmForCream = Math.ceil(creamDeficit / creamPerLv2 / 10)*10; // round up to 10L
-    v2CmForCream = Math.min(v2CmForCream, V2_MAX_CM);
-    // Use manual override if operator entered it
-    const v2CmOverride = parseFloat(document.getElementById('v2-cm-expected')?.value);
-    if(!isNaN(v2CmOverride) && v2CmOverride >= 0) v2CmForCream = v2CmOverride;
-    smFromV2Cm = Math.max(0, (v2CmForCream*1.028 - v2CmForCream*Bv2PerL/Av2)/1.032);
+// ---- build vendor grid ------------------------------------------------
+function addVendorRow(){
+  var tbl=$('intake-table');
+  var i=tbl.rows.length; // 1-based excluding header handled by count
+  var tr=tbl.insertRow(-1);
+  tr.innerHTML='<td>V'+i+'</td>'+
+    ['BmQty','BmFat','BmSnf','CmQty','CmFat','CmSnf'].map(function(k){
+      var step=/Fat|Snf/.test(k)?' step="0.01"':'';
+      return '<td><input type="number"'+step+' class="vin" data-k="'+k+'" oninput="saveState()"></td>';
+    }).join('');
+}
+function readIntake(){
+  var tbl=$('intake-table');var rows=[];
+  for(var r=1;r<tbl.rows.length;r++){
+    var ins=tbl.rows[r].querySelectorAll('.vin');var o={};
+    ins.forEach(function(inp){o[inp.dataset.k]=parseFloat(inp.value)||0;});
+    rows.push(o);
   }
+  return rows;
+}
 
-  // ── SM needed from V3 ──
-  const totalSmFromSeparator = smFromV1 + smFromV2Cm;
-  const v3SmOrder = Math.max(0, Math.ceil((smNeeded - totalSmFromSeparator)/50)*50);
-  const v3SmOrderCapped = Math.min(v3SmOrder, V3_MAX_SM);
-
-  // ── Total cream available after ordering ──
-  const totalCreamFromV2 = v2CmForCream > 0 ? (()=>{
-    const Av2=creamFatFrac-smFatFrac/1.032;
-    const Bv2=v2CmForCream*(v2CmFat/100)-(v2CmForCream*1.028)*smFatFrac/1.032;
-    return Math.max(0, Bv2/Av2);
-  })() : 0;
-  const totalCreamAvail = creamFromV1 + totalCreamFromV2;
-  const creamOk = totalCreamAvail >= creamNeeded;
-  const bmOk    = (v1BmVol + v2BmOrder) >= bmNeeded;
-  const smOk    = (totalSmFromSeparator + v3SmOrderCapped) >= smNeeded;
-
-  // ── Total CM to skim = V1 CM + V2 CM for cream ──
-  STATE.totalCmToSkim = v1CmVol + v2CmForCream;
-
-  // ── Render recommendation ──
-  const block = document.getElementById('order-recommendation-block');
-  if(!block) return;
-
-  // Store for use in Step 3 auto-fill
-  STATE.milkOrder = {
-    v1CmVol, v1BmVol, v1CmFat, v1CmSnf, v1BmFat, v1BmSnf, v1Snf,
-    creamFromV1, smFromV1,
-    v2BmOrder, v2CmForCream, totalCreamFromV2, smFromV2Cm,
-    v3SmOrder:v3SmOrderCapped,
-    totalCreamAvail, creamNeeded,
-    v2CmFat, v2BmFat, v2CmSnf, v2BmSnf, v3SmFat, v3SmSnf,
-    creamFatPct, smFatAfter
+// ---- build milk pool --------------------------------------------------
+function buildPool(){
+  var rows=readIntake();var s=std();
+  var bmQ=0,bmF=0,bmS=0,cmQ=0,cmF=0,cmS=0;
+  rows.forEach(function(v){
+    bmQ+=v.BmQty; bmF+=v.BmQty*v.BmFat/100; bmS+=v.BmQty*v.BmSnf/100;
+    cmQ+=v.CmQty; cmF+=v.CmQty*v.CmFat/100; cmS+=v.CmQty*v.CmSnf/100;
+  });
+  return {
+    bm:{qty:bmQ, fat:bmQ?bmF/bmQ*100:0, snf:bmQ?bmS/bmQ*100:0},   // L, %
+    cm:{qty:cmQ, fat:cmQ?cmF/cmQ*100:0, snf:cmQ?cmS/cmQ*100:0},
+    density:s.density
   };
+}
 
-  const statusBadge = (ok,label) =>
-    `<span style="padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:${ok?'#E8F5E9':'#FFEBEE'};color:${ok?'#2E7D32':'var(--red)'};">${ok?'✓':'⚠'} ${label}</span>`;
+// ---- cream separation from cow milk (mass balance) --------------------
+// Input CM (L) at fat%, snf%. Cream at creamFat% & creamSnf%, skim at skimFat% & skimSnf%.
+// Split CM mass so that FAT balances: creamMass*creamFat + skimMass*skimFat = cmMass*cmFat.
+function separate(cmL, cmFat, cmSnf){
+  var s=std();
+  var cmMass=cmL*s.density;                       // kg
+  var cmFatKg=cmMass*cmFat/100;
+  // creamMass*cf + skimMass*sf = cmFatKg ; creamMass+skimMass=cmMass
+  var cf=s.creamFat/100, sf=s.skimFat/100;
+  var creamMass=(cmFatKg - cmMass*sf)/(cf - sf);  // kg
+  if(creamMass<0)creamMass=0; if(creamMass>cmMass)creamMass=cmMass;
+  var skimMass=cmMass-creamMass;                  // kg
+  var skimL=skimMass/s.density;                   // L (report skim as volume)
+  return {creamKg:creamMass, skimL:skimL, skimMass:skimMass};
+}
 
-  let html = `<div class="need-card" style="margin-bottom:10px;">
-    <div class="need-title">📞 Call vendors with this order</div>`;
-
-  // Separator output from V1
-  html += `<div style="background:rgba(255,255,255,.6);border-radius:8px;padding:10px;margin-bottom:10px;">
-    <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;">🫙 V1 CM Separator Output (skim all ${v1CmVol}L)</div>
-    <div class="need-row"><span class="need-label">Cream produced</span><span class="need-value">${creamFromV1.toFixed(1)} kg</span></div>
-    <div class="need-row"><span class="need-label">SM produced</span><span class="need-value">${smFromV1.toFixed(0)} L</span></div>
-    <div class="need-row" style="border:none;"><span class="need-label">Cream needed (all paneer)</span>
-      <span class="need-value" style="color:${creamOk?'inherit':'var(--red)'};">${creamNeeded.toFixed(1)} kg ${statusBadge(creamFromV1>=creamNeeded,'V1 only')}</span>
-    </div>
-  </div>`;
-
-  // Order table
-  html += `<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px;">ORDER FROM VENDORS</div>`;
-
-  // V2 BM
-  html += `<div class="need-row">
-    <div><span class="need-label">V2 — Buffalo Milk</span><div style="font-size:10px;color:var(--muted);">Quality ratio ${Math.round(bmRatioPct*100)}% of batch · Need ${bmNeeded.toFixed(0)}L total · V1 gives ${v1BmVol}L</div></div>
-    <span class="need-value ${bmOk?'':'style=\"color:var(--red)\"'}">${v2BmOrder}L ${statusBadge(bmOk,'OK')}</span>
-  </div>`;
-
-  // V2 CM (for cream)
-  if(v2CmForCream > 0) {
-    html += `<div class="need-row">
-      <div><span class="need-label">V2 — Cow Milk (for cream)</span>
-        <div style="font-size:10px;color:var(--muted);">deficit ${creamDeficit.toFixed(1)}kg cream → skim ${v2CmForCream}L CM → ${totalCreamFromV2.toFixed(1)}kg cream + ${smFromV2Cm.toFixed(0)}L SM</div>
-      </div>
-      <span class="need-value">${v2CmForCream}L</span>
-    </div>`;
-  } else {
-    html += `<div class="need-row">
-      <span class="need-label">V2 — Cow Milk</span>
-      <span class="need-value" style="color:var(--green2);">Not needed ✓</span>
-    </div>`;
+// ---- paneer reformulation: solve BM(L), skim(L), cream(kg) ------------
+// Hold target fat% & snf% for the scaled mix mass. If BM required > available,
+// At fixed output + fixed fat% & SNF%, the BM/skim/cream split is UNIQUELY
+// determined (3 unknowns, 3 constraints). Solve it; if any stream exceeds what's
+// in the pool it is a genuine shortage — report the deficit and the max makeable
+// output. (You cannot substitute cream for BM without breaking SNF, so there is
+// no free "flex" at fixed spec — being BM-short means a smaller batch.)
+function solvePaneer(mixMassKg, tFat, tSnf, pool, avail, targetOut){
+  var s=std();
+  var fbm=pool.bm.fat/100, sbm=pool.bm.snf/100;   // BM fractions
+  var fsk=s.skimFat/100, ssk=s.skimSnf/100;
+  var fcr=s.creamFat/100, scr=s.creamSnf/100;
+  var M=mixMassKg, Ff=M*tFat/100, Fs=M*tSnf/100;
+  var A=[[1,1,1],[fbm,fsk,fcr],[sbm,ssk,scr]], B=[M,Ff,Fs];
+  var d=det3(A); if(Math.abs(d)<1e-9)return {feasible:false,short:["cannot solve mix — check standards"]};
+  var b=det3(rep(A,0,B))/d, sk=det3(rep(A,1,B))/d, c=det3(rep(A,2,B))/d;
+  if(b<-1e-6||sk<-1e-6||c<-1e-6){
+    return {feasible:false,short:["target fat/SNF not reachable with this milk — check standards"]};
   }
+  var densB=s.density;
+  var bmL=b/densB, skimL=sk/densB, creamKg=c;
+  var short=[];
+  if(bmL>avail.bmL+0.01) short.push("BM "+fmt(bmL-avail.bmL)+" L");
+  if(skimL>avail.skimL+0.01) short.push("Skim "+fmt(skimL-avail.skimL)+" L");
+  if(creamKg>avail.creamKg+0.001) short.push("Fresh cream "+fmt(creamKg-avail.creamKg)+" kg");
+  // Max makeable output = tightest resource ratio × target output
+  var ratios=[];
+  if(bmL>1e-6)ratios.push(avail.bmL/bmL);
+  if(skimL>1e-6)ratios.push(avail.skimL/skimL);
+  if(creamKg>1e-6)ratios.push(avail.creamKg/creamKg);
+  var maxOut=(targetOut||0)*Math.max(0,ratios.length?Math.min.apply(null,ratios):0);
+  return {feasible:short.length===0, bmL:bmL, skimL:skimL, creamKg:creamKg, short:short, maxOut:maxOut};
+}
+function det3(m){return m[0][0]*(m[1][1]*m[2][2]-m[1][2]*m[2][1])-m[0][1]*(m[1][0]*m[2][2]-m[1][2]*m[2][0])+m[0][2]*(m[1][0]*m[2][1]-m[1][1]*m[2][0]);}
+function rep(A,col,B){var C=A.map(function(r){return r.slice();});for(var i=0;i<3;i++)C[i][col]=B[i];return C;}
 
-  // V3 SM
-  html += `<div class="need-row" style="border:none;">
-    <div><span class="need-label">V3 — Skim Milk</span>
-      <div style="font-size:10px;color:var(--muted);">SM needed ${smNeeded.toFixed(0)}L · From separator ${totalSmFromSeparator.toFixed(0)}L · Gap ${Math.max(0,smNeeded-totalSmFromSeparator).toFixed(0)}L</div>
-    </div>
-    <span class="need-value">${v3SmOrderCapped}L ${statusBadge(smOk,'OK')}</span>
-  </div>`;
-
-  // Total cost indicator
-  const totalMilk = v1CmVol+v1BmVol+v2BmOrder+v2CmForCream+v3SmOrderCapped;
-  html += `<div class="need-total" style="margin-top:10px;">
-    <div>
-      <div class="t-label">Total milk today</div>
-      <div style="font-size:11px;opacity:.85;">V1: ${v1CmVol+v1BmVol}L · V2: ${v2BmOrder+v2CmForCream}L · V3: ${v3SmOrderCapped}L</div>
-    </div>
-    <div class="t-value">${totalMilk}L</div>
-  </div>`;
-
-  html += `</div>`;
-
-  // WhatsApp-ready order message button
-  html += `<button onclick="copyMilkOrder()" class="btn btn-wa" style="width:100%;margin-bottom:6px;">📲 Copy Milk Order for WhatsApp</button>`;
-
-  block.innerHTML = html;
-
-  // Auto-fill milk input fields in Step 3
-  setTimeout(() => {
-    const sv = (id, val) => { const el=document.getElementById(id); if(el&&val) el.value=val; };
-    sv('bm1-vol', v1BmVol);
-    sv('bm1-fat', v1BmFat);
-    sv('bm1-snf', v1BmSnf.toFixed(1));
-    // Auto-fill V2 expected qty fields if not manually overridden
-    if(!document.getElementById('v2-bm-expected')?.value)
-      document.getElementById('v2-bm-expected').value = v2BmOrder||'';
-    if(!document.getElementById('v2-cm-expected')?.value)
-      document.getElementById('v2-cm-expected').value = v2CmForCream ? Math.round(v2CmForCream) : '';
-    sv('bm2-vol', v2BmOrder);
-    sv('bm2-fat', v2BmFat||v1BmFat);
-    sv('bm2-snf', v2BmSnf||v1Snf);
-    sv('cm1-vol', v1CmVol);
-    sv('cm1-fat', v1CmFat.toFixed(2));
-    sv('cm1-snf', v1CmSnf.toFixed(2));
-    sv('cm2-vol', v2CmForCream);
-    sv('cm2-fat', v2CmFat||4.0);
-    sv('cm2-snf', v2CmSnf||8.5);
-    sv('sm-vol',  v3SmOrderCapped);
-    sv('sm-fat',  v3SmFat||0.1);
-    sv('sm-snf',  v3SmSnf||8.5);
-    sv('v4-cream-fat', creamFatPct);
-    // Separator section
-    sv('cm-to-skim', v1CmVol+v2CmForCream);
-    // Also show how much cream is needed vs available in a summary
-    const creamNeededEl = document.getElementById('cream-needed-summary');
-    if(creamNeededEl) creamNeededEl.textContent = 'Cream needed: '+creamNeeded.toFixed(1)+'kg · V1 CM gives: '+creamFromV1.toFixed(1)+'kg'+(v2CmForCream>0?' · Skim '+Math.round(v2CmForCream)+'L extra from V2':'');
-    const blendedSkimFat = (v1CmVol+v2CmForCream) > 0
-      ? (v1CmVol*v1CmFat + v2CmForCream*(g('v2-cm-fat')||4.0)) / (v1CmVol+v2CmForCream)
-      : 4.0;
-    sv('cm-skim-fat', blendedSkimFat.toFixed(2));
-    sv('cream-fat', creamFatPct);
-    sv('sm-fat-after', smFatAfter);
-    sv('cream-kg', totalCreamAvail.toFixed(2));
-    sv('sm-sep-vol', (smFromV1+smFromV2Cm).toFixed(0));
-    sv('sm-sep-snf', v1Snf);
-    if(typeof onMilkChange==='function') onMilkChange();
-  }, 200);
+// ---- plan management --------------------------------------------------
+function refreshProductDropdown(){
+  var sel=$('plan-product');sel.innerHTML='';
+  Object.keys(PRODUCTS).forEach(function(k){var o=document.createElement('option');o.value=k;o.text=k+' ('+PRODUCTS[k].output+' '+PRODUCTS[k].unit+' std)';sel.add(o);});
+}
+function addBatch(){
+  var prod=$('plan-product').value;var qty=parseFloat($('plan-qty').value)||0;
+  if(qty<=0){toast('Enter output quantity');return;}
+  STATE.plan.push({product:prod,qty:qty});
+  $('plan-qty').value='';
+  renderPlan();saveState();
+}
+function removeBatch(i){STATE.plan.splice(i,1);renderPlan();saveState();}
+function clearPlan(){STATE.plan=[];STATE.batches=[];renderPlan();$('results').innerHTML='';saveState();}
+function renderPlan(){
+  var el=$('batch-list');
+  if(!STATE.plan.length){el.innerHTML='<div class="muted" style="margin-top:8px;">No products added yet.</div>';return;}
+  el.innerHTML=STATE.plan.map(function(b,i){
+    return '<div class="batch-row"><span class="nm">'+b.product+'</span><span class="muted">'+fmt(b.qty)+' '+PRODUCTS[b.product].unit+'</span><button class="btn-sec btn-sm" onclick="removeBatch('+i+')">✕</button></div>';
+  }).join('');
 }
 
-function copyMilkOrder() {
-  const o = STATE.milkOrder;
-  if(!o) { showToast('Calculate order first'); return; }
-  const date = new Date().toLocaleDateString('en-IN');
-  let msg = `*🥛 Gaavn Fresh — Milk Order*\n📅 ${date}\n\n`;
-  msg += `*Vendor 1* (natural supply):\n`;
-  msg += `CM: ${o.v1CmVol}L @ ${o.v1CmFat.toFixed(2)}% fat / ${o.v1CmSnf ? o.v1CmSnf.toFixed(2)+'% SNF' : ''}\n`;
-  msg += `BM: ${o.v1BmVol}L @ ${o.v1BmFat}% fat\n\n`;
-  if(o.v2BmOrder>0||o.v2CmForCream>0) {
-    msg += `*Vendor 2* (order):\n`;
-    if(o.v2BmOrder>0)     msg += `BM: ${o.v2BmOrder}L\n`;
-    if(o.v2CmForCream>0)  msg += `CM: ${o.v2CmForCream}L (for cream)\n`;
-    msg += `\n`;
+// ══════════════════════════════════════════════════════════════════════
+// RUN THE PLAN — the production sequence / inventory engine
+// ══════════════════════════════════════════════════════════════════════
+function addPurch(inv,k,v){inv.purchased[k]=(inv.purchased[k]||0)+v;}
+
+// ---- render results ---------------------------------------------------
+function renderResults(){
+  var R=STATE.lastRun; if(!R){return;} var s=std();
+  var h='';
+  // Shortage banner
+  if(R.shortages.length){
+    h+='<div class="card" style="border-color:var(--red);">';
+    h+='<h3 style="color:var(--red);">⛔ Production Stopped — Shortages</h3>';
+    h+=R.shortages.map(function(x){return '<div class="ing"><span>'+x+'</span></div>';}).join('');
+    h+='<div class="warn">Add more milk / cream / curd or reduce these batches, then re-run.</div></div>';
   }
-  msg += `*Vendor 3* (order):\n`;
-  msg += `SM: ${o.v3SmOrder}L\n\n`;
-  msg += `*Separator:* Skim ${o.v1CmVol+o.v2CmForCream}L CM\n`;
-  msg += `→ Cream: ${o.totalCreamAvail.toFixed(1)}kg · SM: ${(o.smFromV1+o.smFromV2Cm).toFixed(0)}L\n`;
-  msg += `\n_Gaavn Fresh Recipe Calculator_`;
+  // Sequence log
+  h+='<div class="card"><h3>Production Sequence</h3>';
+  h+='<ol style="margin:0;padding-left:18px;font-size:13px;line-height:1.6;">'+R.log.map(function(l){return '<li>'+l+'</li>';}).join('')+'</ol></div>';
 
-  navigator.clipboard.writeText(msg).catch(()=>{
-    const t=document.createElement('textarea'); t.value=msg;
-    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-  });
-  showToast('✓ Milk order copied for WhatsApp');
+  // Per product recipes
+  h+='<div class="card"><h3>Batch Recipes &amp; Yield</h3>';
+  h+=renderBlocks();
+  h+='</div>';
+
+  // Inventory dashboard
+  var inv=R.inv;
+  h+='<div class="card"><h3>Inventory After Production</h3><div class="chips">';
+  h+=chip(inv.bmL,'BM left (L)');
+  h+=chip(R.cmReservedLeft,'CM reserved left (L)');
+  h+=chip(inv.skimL,'Skim left (L)');
+  h+=chip(inv.creamKg,'Fresh cream left (kg)');
+  h+=chip(inv.excessCreamKg,'Cream→Ghee (kg)');
+  h+=chip(inv.curdKg,'Curd left (kg)');
+  h+='</div>';
+  // purchased inputs
+  var pk=Object.keys(inv.purchased);
+  if(pk.length){h+='<hr><div class="muted" style="margin-bottom:6px;">Purchased inputs consumed:</div>';h+=pk.map(function(k){return '<div class="ing"><span>'+k+'</span><span>'+fmt(inv.purchased[k])+'</span></div>';}).join('');}
+  // finished goods
+  var fk=Object.keys(inv.finished);
+  if(fk.length){h+='<hr><div class="muted" style="margin-bottom:6px;">Finished goods produced:</div>';h+=fk.map(function(k){return '<div class="ing"><span>'+k+'</span><span>'+fmt(inv.finished[k])+' '+PRODUCTS[k].unit+'</span></div>';}).join('');}
+  h+='</div>';
+
+  // export
+  h+='<div class="card"><button class="btn-primary" onclick="copyPlan()">📋 Copy full plan</button></div>';
+
+  $('results').innerHTML=h;
 }
+function chip(v,l){return '<div class="chip"><div class="v">'+fmt(v)+'</div><div class="l">'+l+'</div></div>';}
 
-// ══ CREAM SEPARATOR CALCULATOR ══
-// Fat balance: cm_vol * cm_fat = cream_kg * cream_fat + sm_vol * sm_fat
-// cream_kg in kg (density 0.9 kg/L), sm_vol in L
-function calcSeparator() {
-  const cmVol   = parseFloat(document.getElementById('cm-to-skim')?.value)||0;
-  const cmFat   = parseFloat(document.getElementById('cm-skim-fat')?.value)||4.0;
-  const creamFat= parseFloat(document.getElementById('cream-fat')?.value)||60;
-  const smFat   = parseFloat(document.getElementById('sm-fat-after')?.value)||0.1;
-  const out     = document.getElementById('separator-output');
-  if(cmVol===0){ out.style.display='none'; return; }
-
-  // Fat balance: cmVol * cmFat = cream_kg * creamFat + smVol * smFat
-  // Mass balance: cmVol * 1.028 = cream_kg + smVol * 1.032  (approx densities)
-  // Solve simultaneously:
-  const cmFatFrac   = cmFat/100;
-  const cFatFrac    = creamFat/100;
-  const smFatFrac   = smFat/100;
-  const cmMass      = cmVol * 1.028;
-  // cream_kg = (cmVol*cmFatFrac - cmVol*smFatFrac) / (cFatFrac - smFatFrac) * (1.028/1.032... approx)
-  // Simpler: assume SM density ~1.032, cream density 0.9
-  // cmVol * cmFatFrac = cream_kg*cFatFrac + smVol*smFatFrac
-  // cmMass = cream_kg + smVol*1.032
-  // → smVol = (cmMass - cream_kg)/1.032
-  // → cmVol*cmFatFrac = cream_kg*cFatFrac + (cmMass-cream_kg)/1.032 * smFatFrac
-  // → solve for cream_kg:
-  const A = cFatFrac - smFatFrac/1.032;
-  const B = cmVol*cmFatFrac - cmMass*smFatFrac/1.032;
-  const creamKg = B/A;
-  const smVol   = (cmMass - creamKg)/1.032;
-
-  out.style.display='block';
-  document.getElementById('sep-cream-out').textContent = creamKg.toFixed(2)+' kg';
-  document.getElementById('sep-sm-out').textContent    = smVol.toFixed(0)+' L';
-
-  // How much paneer cream is needed vs available
-  const paneers = ['paneer_lite','paneer_med','paneer_malai'];
-  let totalCreamNeeded = 0;
-  paneers.forEach(pid => {
-    const vol = STATE.batchVol[pid]||0; if(vol===0) return;
-    const prod = PRODUCTS.find(p=>p.id===pid);
-    const pool = getMilkPool();
-    const need = calcCreamForPaneer(vol, prod.fat, pool.bmFat, pool.bmVol, pool.smFat);
-    totalCreamNeeded += need;
-  });
-
-  const extraCm = totalCreamNeeded > creamKg
-    ? `Need ${(totalCreamNeeded-creamKg).toFixed(1)}kg more cream — order ~${Math.ceil((totalCreamNeeded-creamKg)/creamKg*cmVol/10)*10}L extra CM`
-    : '✓ Sufficient';
-  document.getElementById('sep-extra-cm').textContent = extraCm;
-  document.getElementById('sep-extra-cm').style.color = totalCreamNeeded>creamKg ? 'var(--red)' : 'var(--green2)';
-
-  // Auto-fill actual cream and SM fields
-  document.getElementById('cream-kg').value    = creamKg.toFixed(2);
-  document.getElementById('sm-sep-vol').value  = smVol.toFixed(0);
-  onMilkChange();
-}
-
-// Calculate cream needed for a paneer batch given BM available
-// Logic: BM is fixed input, SM fills rest of batch, cream makes up fat deficit
-function calcCreamForPaneer(batchVol, targetFatPct, bmFat, bmAvail, smFat, creamFat) {
-  creamFat = creamFat || (parseFloat(document.getElementById('cream-fat')?.value)||60)/100;
-  const targetFat = targetFatPct/100;
-  const smFatFrac = smFat || 0.001;
-  // BM used = min(bmAvail, batchVol)
-  const bmUsed = Math.min(bmAvail, batchVol);
-  const smUsed = batchVol - bmUsed;
-  // Fat from BM + SM
-  const fatFromMilk = bmUsed*(bmFat/100) + smUsed*smFatFrac;
-  // Fat needed in total vat
-  const fatNeeded = batchVol * 1.032 * targetFat;
-  const fatDeficit = fatNeeded - fatFromMilk;
-  return Math.max(0, fatDeficit / creamFat);
-}
-
-function onMilkChange() {
-  STATE.pool = getMilkPool();
-  renderMilkVsNeed();
-}
-
-function renderMilkVsNeed() {
-  const p = STATE.pool;
-  if(!p) return;
-  // Compare to needed (from step 1 calc)
-  let bmNeed=0, cmNeed=0, smNeed=0;
-  PRODUCTS.forEach(prod => {
-    const vol = STATE.batchVol[prod.id]||0;
-    if(vol===0) return;
-    if(prod.milkBase==='BM_SM'){
-      const blend = pearson(vol, prod.fat, p.bmFat, p.smFat);
-      bmNeed+=blend.aVol; smNeed+=blend.bVol;
-    } else if(prod.milkBase==='CM') cmNeed+=vol;
-    else if(prod.milkBase==='SM')   smNeed+=vol;
-    else if(prod.milkBase==='CM_SM'){cmNeed+=vol*0.5; smNeed+=vol*0.5;}
-  });
-
-  const mkBar = (label, used, avail, color) => {
-    const pct = avail>0 ? Math.min(100,used/avail*100) : 0;
-    const over = used > avail;
-    return `<div class="usage-bar-wrap">
-      <div class="usage-bar-label">
-        <span>${label}</span>
-        <span style="color:${over?'var(--red)':'var(--ink)'};font-weight:700;">${used.toFixed(0)}L needed / ${avail.toFixed(0)}L available${over?' ⚠':''}</span>
-      </div>
-      <div class="usage-bar-track"><div class="usage-bar-fill" style="width:${pct}%;background:${over?'var(--red)':color};"></div></div>
-    </div>`;
-  };
-
-  document.getElementById('milk-vs-need-block').innerHTML =
-    `<div class="card" style="margin-top:4px;">
-      <div class="card-title">📊 Milk Balance Check</div>
-      ${mkBar('🐃 Buffalo Milk',bmNeed,p.bmVol,'#E65100')}
-      ${mkBar('🐄 Cow Milk',cmNeed,p.cmVol,'#2E7D32')}
-      ${mkBar('🥛 Skim Milk',smNeed,p.smVol,'#1565C0')}
-    </div>`;
-}
-
-// ══ STEP 3: SCHEDULE ══
-function renderSchedule() {
-  const p = STATE.pool || getMilkPool();
-
-  // Group products by when their milk arrives
-  const earlyBatches=[], lateBatches=[];
-  PRODUCTS.forEach(prod => {
-    const vol = STATE.batchVol[prod.id]||0;
-    if(vol===0) return;
-    if(EARLY_PRODUCTS.includes(prod.id)) earlyBatches.push(prod);
-    else lateBatches.push(prod);
-  });
-
-  let html = `<div class="timeline">`;
-
-  // 9:30 AM - BM Vendor 1 arrives
-  html += tlRow('09:30','#E65100',
-    '🐃 BM Vendor 1 arrives',
-    p.bm1Vol>0?`${p.bm1Vol}L Buffalo Milk`:'Not ordered today','bm');
-
-  // 11:00 AM - CM Vendor 1 arrives
-  html += tlRow('11:00','#2E7D32',
-    '🐄 CM Vendor 1 arrives',
-    p.cm1Vol>0?`${p.cm1Vol}L Cow Milk`:'Not ordered today','cm');
-
-  // Early production (paneer - uses BM)
-  if(earlyBatches.length > 0) {
-    html += tlRow('11:30','#C8860A',
-      `🧀 Start Paneer production`,
-      earlyBatches.map(p=>p.name).join(', '),'amber');
-  }
-
-  // 1:00 PM - All remaining vendors
-  html += tlRow('13:00','#1565C0',
-    '🥛 BM V2 + CM V2 + SM Vendor 3',
-    [p.bm2Vol>0?`BM ${p.bm2Vol}L`:'', p.cm2Vol>0?`CM ${p.cm2Vol}L`:'', p.smVol>0?`SM ${p.smVol}L`:''].filter(Boolean).join(' · '),'sm');
-
-  // Later production (curd, khoya - uses CM/SM)
-  if(lateBatches.length > 0) {
-    html += tlRow('13:30','#00695C',
-      `🍶 Start Curd / Khoya production`,
-      lateBatches.map(p=>p.name).join(', '),'teal');
-  }
-
-  html += `</div>`;
-  document.getElementById('schedule-block').innerHTML = html;
-
-  // Milk balance
-  let balHtml = '';
-  const types = [
-    {label:'🐃 Buffalo Milk', avail:p.bmVol, fat:p.bmFat, snf:p.bmSnf},
-    {label:'🐄 Cow Milk',     avail:p.cmVol, fat:p.cmFat, snf:p.cmSnf},
-    {label:'🥛 Skim Milk',    avail:p.smVol, fat:p.smFat, snf:p.smSnf},
-  ];
-  types.forEach(t => {
-    if(t.avail>0) balHtml += `<div class="need-row">
-      <span class="need-label">${t.label}</span>
-      <span class="need-value">${t.avail}L <span style="font-size:11px;color:var(--muted)">fat ${t.fat.toFixed(1)}% · SNF ${t.snf.toFixed(1)}%</span></span>
-    </div>`;
-  });
-  if(p.creamKg>0) balHtml += `<div class="need-row"><span class="need-label">🫙 Cream available</span><span class="need-value">${p.creamKg}kg</span></div>`;
-  document.getElementById('milk-balance-block').innerHTML = balHtml || '<div style="color:var(--muted);font-size:13px;">Enter milk quantities in Step 2</div>';
-}
-
-function tlRow(time, color, title, sub, type) {
-  return `<div class="tl-row">
-    <div class="tl-time">${time}</div>
-    <div class="tl-dot-col"><div class="tl-dot" style="background:${color};"></div><div class="tl-line"></div></div>
-    <div class="tl-card">
-      <div class="tl-card-title">${title}</div>
-      ${sub?`<div class="tl-card-sub">${sub}</div>`:''}
-    </div>
-  </div>`;
-}
-
-// ══ PEARSON SQUARE BLENDING ══
-// Given total vol, target fat, source A fat, source B fat → volumes of A and B
-function pearson(totalVol, targetFat, fatA, fatB) {
-  if(Math.abs(fatA-fatB)<0.001) return {aVol:totalVol, bVol:0};
-  const bVol = totalVol*(fatA-targetFat)/(fatA-fatB);
-  const aVol = totalVol-bVol;
-  return {aVol:Math.max(0,aVol), bVol:Math.max(0,bVol)};
-}
-
-// ══ SNF BALANCING ══
-// SMP needed to raise milk SNF from milkSnf% to targetSnf% for given volume
-// Formula: smpKg = vol * density * (targetSnf - milkSnf) / 100 / 0.97
-function calcSMP(vol, milkSnf, targetSnf, density) {
-  density = density||1.030;
-  const smpFraction = 0.97; // 97% SNF in SMP
-  return Math.max(0, vol * density * (targetSnf - milkSnf) / 100 / smpFraction);
-}
-
-// ══ STEP 4: CALCULATE + RENDER RECIPES ══
-function calculateAndRenderRecipes() {
-  const pool = STATE.pool || getMilkPool();
-  STATE.pool = pool;
-  const snfLiteCurd  = parseFloat(document.getElementById('snf-lite-curd').value)||11.5;
-  const snfFreshCurd = parseFloat(document.getElementById('snf-fresh-curd').value)||10.5;
-
-  let html = '';
-  let bmUsed=0, cmUsed=0, smUsed=0;
-
-  const activeProducts = PRODUCTS.filter(p => (STATE.batchVol[p.id]||0) > 0);
-  if(activeProducts.length === 0) {
-    document.getElementById('recipe-output').innerHTML =
-      '<div class="card" style="color:var(--muted);text-align:center;padding:30px;">No products selected. Go back to Step 1 and enter demand.</div>';
-    return;
-  }
-
-  // Header copy-all button
-  html += `<div style="display:flex;gap:8px;margin-bottom:12px;">
-    <button onclick="copyAll()" class="btn btn-wa" style="flex:1;">📲 Copy All for WhatsApp</button>
-    <button onclick="logToSheet()" class="btn btn-green" style="flex:1;">📋 Log to Sheet</button>
-  </div>`;
-
-  activeProducts.forEach(prod => {
-    const vol = STATE.batchVol[prod.id] || defaultBatch(prod.id);
-    const stock = STATE.stock[prod.id]||0;
-    const demand = STATE.demand[prod.id]||0;
-    const produce = Math.max(0, demand - stock);
-
-    let bmV=0, cmV=0, smV=0, smpKg=0, creamKg=0, warnings=[];
-    const ings = [];
-
-    if(prod.fromCurd) {
-      // Lassi/Chaas: made from fresh curd — show additive quantities per vol of lassi/chaas
-      ings.push(...prod.coag.map(c => fmtIng(c.n, c.per*vol, c.u)));
-      html += recipeCard(prod, vol, stock, demand,
-        [{label:'From',qty:'Fresh Curd batch',unit:''}],
-        ings, [], pool);
-      return;
-    }
-
-    if(prod.milkBase==='BM_SM') {
-      // PANEER RECIPE (validated from May 2026 data):
-      // BM=20% of milk, SM=80%, SM fat fixed 0.1%
-      // Blended fat = (BM×BM_fat + SM×0.001) / total_milk
-      // Cream (62%) added to bring vat to target fat%
-      // If blended fat >= 1.5% (good milk): only 0.2% top-up needed
-      const creamFatPct = CREAM_FAT_DEFAULT; // 62%
-      const bmRatioPct  = (parseFloat(document.getElementById('bm-ratio')?.value)||20) / 100;
-      bmV = vol * bmRatioPct;
-      smV = vol - bmV;
-      const smFatFixed  = 0.001;
-      const blendedFat  = (bmV*(pool.bmFat/100) + smV*smFatFixed) / vol;
-      const fatFromMilk = bmV*(pool.bmFat/100) + smV*smFatFixed;
-      const fatNeeded   = vol * 1.032 * (prod.fat/100);
-      creamKg = Math.max(0, (fatNeeded - fatFromMilk) / (creamFatPct/100));
-      bmUsed+=bmV; smUsed+=smV;
-      const blendedPct  = (blendedFat*100).toFixed(2);
-      const goodMilkThreshold = prod.goodMilkFat || 1.5;
-      if(blendedFat*100 < goodMilkThreshold)
-        warnings.push(`Low milk fat day — blended ${blendedPct}%. Cream ${creamKg.toFixed(2)}kg needed to reach ${prod.fat}%`);
-      else
-        warnings.push(`✓ Good milk — blended ${blendedPct}%. Adding ${creamKg.toFixed(2)}kg cream as top-up to ${prod.fat}%`);
-      if(bmV > pool.bmVol) warnings.push(`Need ${bmV.toFixed(0)}L BM, only ${pool.bmVol.toFixed(0)}L available — order more from V2`);
-      if(smV > pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol.toFixed(0)}L available`);
-      if(creamKg > pool.creamKg) warnings.push(`Need ${creamKg.toFixed(2)}kg cream, only ${pool.creamKg.toFixed(2)}kg available — skim more CM`);
-    } else if(prod.milkBase==='CM') {
-      cmV=vol; cmUsed+=vol;
-      if(cmV>pool.cmVol) warnings.push(`Need ${cmV.toFixed(0)}L CM, only ${pool.cmVol}L available`);
-    } else if(prod.milkBase==='SM') {
-      smV=vol; smUsed+=vol;
-      if(smV>pool.smVol) warnings.push(`Need ${smV.toFixed(0)}L SM, only ${pool.smVol}L available`);
-    } else if(prod.milkBase==='CM_SM') {
-      const blend = pearson(vol, prod.fat, pool.cmFat, pool.smFat);
-      cmV=blend.aVol; smV=blend.bVol;
-      cmUsed+=cmV; smUsed+=smV;
-    }
-
-    // SNF balancing for curd products
-    let targetSnf = null;
-    let milkSnf = 0;
-    let milkDensity = 1.030;
-    if(prod.id==='curd_lite') {
-      // TS = 11.5% = fat(0.5%) + SNF(11%). Add SMP to bring SNF from milk level to 11%.
-      targetSnf = prod.targetSnf || 11.0; milkSnf=pool.smSnf||8.5; milkDensity=1.032;
-    } else if(prod.id==='curd_fresh') {
-      targetSnf=snfFreshCurd; milkSnf=pool.cmSnf||8.5; milkDensity=1.028;
-    } else if(prod.id==='khoya_cm') {
-      milkSnf=pool.cmSnf;
-    } else if(prod.id==='khoya_std') {
-      milkSnf=pool.cmSnf*0.5+pool.smSnf*0.5; // approx blend
-    }
-
-    if(targetSnf !== null) {
-      smpKg = calcSMP(vol, milkSnf, targetSnf, milkDensity);
-    }
-
-    // Build ingredient list
-    const milkRows = [];
-    if(bmV>0) milkRows.push({label:'Buffalo Milk (BM)',qty:bmV.toFixed(0),unit:'L'});
-    if(cmV>0) milkRows.push({label:'Cow Milk (CM)',qty:cmV.toFixed(0),unit:'L'});
-    if(smV>0) milkRows.push({label:'Skim Milk (SM)',qty:smV.toFixed(0),unit:'L'});
-    if(creamKg>0) milkRows.push({label:'Cream',qty:creamKg.toFixed(2),unit:'kg'});
-
-    // SMP row in ingredients
-    const addIng = [];
-    if(smpKg>0) addIng.push({name:'SMP', qty:smpKg, rawUnit:'kg', display:{qty:`${smpKg.toFixed(3)} kg`}});
-    prod.coag.forEach(c => { addIng.push(fmtIng(c.n, c.per*vol, c.u)); });
-
-    html += recipeCard(prod, vol, stock, demand, milkRows, addIng, warnings, pool, targetSnf, milkSnf, smpKg);
-  });
-
-  document.getElementById('recipe-output').innerHTML = html;
-}
-
-function recipeCard(prod, vol, stock, demand, milkRows, ings, warnings, pool, targetSnf, milkSnf, smpKg) {
-  let h = `<div class="recipe-card" id="rcard-${prod.id}">
-    <div class="rh">
-      <div>
-        <div class="rh-name">${prod.icon} ${prod.name}</div>
-        <div class="rh-sub">Batch ${vol}L · Fat ${prod.fat}% · Stock ${stock}kg · Orders ${demand}kg</div>
-      </div>
-      <button class="rh-copy" onclick="copyOne('${prod.id}')">📋 Copy</button>
-    </div>
-    <div class="rb">`;
-
-  warnings.forEach(w => { h += `<div class="alert warn">⚠ ${w}</div>`; });
-
-  if(targetSnf) {
-    h += `<div class="alert info">SNF: milk ${milkSnf.toFixed(1)}% → target ${targetSnf}% · SMP adds ${((targetSnf-milkSnf)).toFixed(1)}%</div>`;
-  }
-
-  if(milkRows.length > 0) {
-    h += `<div class="section-divider" style="margin:8px -16px 4px;">MILK</div>`;
-    milkRows.forEach(r => {
-      h += `<div class="ing-row"><span class="ing-name">${r.label}</span><span><span class="ing-qty">${r.qty}</span><span class="ing-unit"> ${r.unit}</span></span></div>`;
-    });
-  }
-
-  if(ings.length > 0) {
-    h += `<div class="section-divider" style="margin:8px -16px 4px;">INGREDIENTS</div>`;
-    ings.forEach(i => {
-      const qty = i.display ? i.display.qty : `${i.qty}`;
-      const [num, ...unitParts] = qty.split(' ');
-      h += `<div class="ing-row"><span class="ing-name">${i.name||i.n}</span><span><span class="ing-qty">${num}</span><span class="ing-unit"> ${unitParts.join(' ')}</span></span></div>`;
-    });
-  }
-
-  h += `</div></div>`;
-  return h;
-}
-
-function fmtIng(name, qty, unit) {
-  let displayQty;
-  if(unit==='g/L') {
-    const kg=qty/1000;
-    displayQty=kg>=0.01?`${kg.toFixed(3)} kg`:`${qty.toFixed(0)} g`;
-  } else if(unit==='ml/L') displayQty=`${qty.toFixed(0)} ml`;
-  else if(unit==='L/L')   displayQty=`${qty.toFixed(1)} L`;
-  else displayQty=`${qty.toFixed(2)}`;
-  return {name, display:{qty:displayQty}};
-}
-
-function defaultBatch(id) {
-  if(id.startsWith('paneer')) return 600;
-  if(id.startsWith('khoya')) return 70;
-  if(id==='curd_lite') return 100;
-  if(id==='curd_fresh') return 50;
-  return 100;
-}
-
-// ══ WHATSAPP COPY ══
-function copyOne(prodId) {
-  const prod = PRODUCTS.find(p=>p.id===prodId);
-  if(!prod) return;
-  const vol = STATE.batchVol[prodId]||defaultBatch(prodId);
-  const pool = STATE.pool||getMilkPool();
-  const snfLiteCurd  = parseFloat(document.getElementById('snf-lite-curd')?.value)||11.5;
-  const snfFreshCurd = parseFloat(document.getElementById('snf-fresh-curd')?.value)||10.5;
-
-  let msg = `*${prod.icon} ${prod.name}*\n`;
-  msg += `📅 ${TODAY_STR}  |  Batch: ${vol}L\n`;
-  msg += `Target fat: ${prod.fat}%\n\n`;
-
-  if(!prod.fromCurd) {
-    msg += `*MILK:*\n`;
-    if(prod.milkBase==='BM_SM') {
-      const cFP = parseFloat(document.getElementById('cream-fat')?.value)||60;
-      const bmRatioWA = (parseFloat(document.getElementById('bm-ratio')?.value)||20)/100;
-      const bmVc = vol * bmRatioWA;
-      const smVc = vol - bmVc;
-      const fatFromMilkWA = bmVc*(pool.bmFat/100) + smVc*(pool.smFat||0.001);
-      const crKgC = Math.max(0, (vol*1.032*(prod.fat/100) - fatFromMilkWA)/(cFP/100));
-      if(bmVc>0) msg += `BM  ${bmVc.toFixed(0)} lit\n`;
-      if(smVc>0) msg += `SM  ${smVc.toFixed(0)} lit\n`;
-      if(crKgC>0) msg += `Cream  ${crKgC.toFixed(2)} kg\n`;
-    } else if(prod.milkBase==='CM') msg += `CM  ${vol} lit\n`;
-    else if(prod.milkBase==='SM')   msg += `SM  ${vol} lit\n`;
-    else if(prod.milkBase==='CM_SM') {
-      const b = pearson(vol, prod.fat, pool.cmFat, pool.smFat);
-      if(b.aVol>0) msg += `CM  ${b.aVol.toFixed(0)} lit\n`;
-      if(b.bVol>0) msg += `SM  ${b.bVol.toFixed(0)} lit\n`;
-    }
-  } else {
-    msg += `*FROM:* Fresh Curd batch\n`;
-  }
-
-  // SMP
-  let smpKg=0;
-  if(prod.id==='curd_lite') smpKg=calcSMP(vol,pool.smSnf,snfLiteCurd,1.032);
-  if(prod.id==='curd_fresh') smpKg=calcSMP(vol,pool.cmSnf,snfFreshCurd,1.028);
-
-  const ingLines = [];
-  if(smpKg>0) ingLines.push(`SMP  ${smpKg.toFixed(3)} kg`);
-  prod.coag.forEach(c => {
-    const qty = c.per*vol;
-    let v;
-    if(c.u==='g/L') v=`${(qty/1000).toFixed(3)} kg`;
-    else if(c.u==='ml/L') v=`${qty.toFixed(0)} ml`;
-    else v=`${qty.toFixed(1)} L`;
-    ingLines.push(`${c.n}  ${v}`);
-  });
-
-  if(ingLines.length) msg += `\n*INGREDIENTS:*\n${ingLines.join('\n')}\n`;
-  msg += `\n_Gaavn Fresh — Recipe Calculator_`;
-
-  navigator.clipboard.writeText(msg).catch(()=>{
-    const t=document.createElement('textarea'); t.value=msg;
-    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-  });
-  showToast(`✓ ${prod.name} recipe copied`);
-}
-
-function copyAll() {
-  const pool = STATE.pool||getMilkPool();
-  const snfLiteCurd  = parseFloat(document.getElementById('snf-lite-curd')?.value)||11.5;
-  const snfFreshCurd = parseFloat(document.getElementById('snf-fresh-curd')?.value)||10.5;
-  const date = TODAY_STR;
-
-  let msg = `*🧀 Gaavn Fresh — Production Recipes*\n📅 ${date}\n\n`;
-
-  PRODUCTS.forEach(prod => {
-    const vol = STATE.batchVol[prod.id]||0;
-    if(vol===0) return;
-    msg += `━━━━━━━━━━━━\n*${prod.icon} ${prod.name}* — ${vol}L\n`;
-
-    if(!prod.fromCurd) {
-      if(prod.milkBase==='BM_SM') {
-        const cFatPct2=parseFloat(document.getElementById('cream-fat')?.value)||60;
-        const bmRatioAll=(parseFloat(document.getElementById('bm-ratio')?.value)||20)/100;
-        const bmVa=vol*bmRatioAll, smVa=vol-bmVa;
-        const fatFromMilkAll=bmVa*(pool.bmFat/100)+smVa*(pool.smFat||0.001);
-        const crKg=Math.max(0,(vol*1.032*(prod.fat/100)-fatFromMilkAll)/(cFatPct2/100));
-        if(bmVa>0) msg+=`BM ${bmVa.toFixed(0)}lit\n`;
-        if(smVa>0) msg+=`SM ${smVa.toFixed(0)}lit\n`;
-        if(crKg>0) msg+=`Cream ${crKg.toFixed(2)}kg\n`;
-      } else if(prod.milkBase==='CM') msg+=`CM ${vol}lit\n`;
-      else if(prod.milkBase==='SM')   msg+=`SM ${vol}lit\n`;
-      else if(prod.milkBase==='CM_SM'){
-        const b=pearson(vol,prod.fat,pool.cmFat,pool.smFat);
-        if(b.aVol>0) msg+=`CM ${b.aVol.toFixed(0)}lit\n`;
-        if(b.bVol>0) msg+=`SM ${b.bVol.toFixed(0)}lit\n`;
-      }
+// Rebuild per-product blocks for display (re-run capture)
+function renderBlocks(){
+  var R=STATE.lastRun; var out='';
+  var blocks=R.blocks||[];
+  blocks.forEach(function(b){
+    var cls=b.short&&b.short.length?' short':'';
+    out+='<div class="result-block'+cls+'">';
+    out+='<h4>'+b.product+' — '+fmt(b.out)+' '+b.unit+' '+(b.short&&b.short.length?'<span class="pill short">SHORT</span>':'<span class="pill ok">OK</span>')+'</h4>';
+    if(b.mixInfo)out+='<div class="muted small" style="margin-bottom:6px;">'+b.mixInfo+'</div>';
+    if(b.note)out+='<div class="muted small" style="margin-bottom:6px;">'+b.note+'</div>';
+    if(b.short&&b.short.length){
+      out+='<div class="warn">Short of: '+b.short.join(', ')+(b.maxOut>0?'<br>Max makeable at this spec ≈ <b>'+fmt(b.maxOut)+' '+b.unit+'</b>':'')+'</div>';
     } else {
-      msg+=`From Fresh Curd batch\n`;
+      b.lines.forEach(function(l){out+='<div class="ing"><span>'+l[0]+'</span><span>'+fmt(l[1])+' '+l[2]+'</span></div>';});
+      // yield row
+      out+='<hr><div class="ing"><span>Expected yield</span><span>'+fmt(b.out)+' '+b.unit+'</span></div>';
+      out+='<div class="ing"><span>Actual yield</span><span><input type="number" style="width:90px;padding:4px;" placeholder="enter" oninput="setActual(\''+b.product+'\',this.value)" value="'+(b.actual||'')+'"></span></div>';
+      if(b.actual){var yp=b.out>0?(b.actual/b.out*100):0;out+='<div class="ing"><span>Yield %</span><span style="font-weight:700;color:'+(yp<95?'var(--red)':'var(--green)')+'">'+r2(yp)+'%</span></div>';var loss=b.out-b.actual;out+='<div class="ing"><span>Loss vs expected</span><span>'+fmt(loss)+' '+b.unit+'</span></div>';}
     }
+    out+='</div>';
+  });
+  return out;
+}
+function setActual(prod,val){
+  if(!STATE.lastRun||!STATE.lastRun.blocks)return;
+  STATE.lastRun.blocks.forEach(function(b){if(b.product===prod)b.actual=parseFloat(val)||0;});
+  renderResults();saveState();
+}
 
-    let smpKg=0;
-    if(prod.id==='curd_lite') smpKg=calcSMP(vol,pool.smSnf,snfLiteCurd,1.032);
-    if(prod.id==='curd_fresh') smpKg=calcSMP(vol,pool.cmSnf,snfFreshCurd,1.028);
-    if(smpKg>0) msg+=`SMP ${smpKg.toFixed(3)} kg\n`;
+function copyPlan(){
+  var R=STATE.lastRun; if(!R)return;
+  var t='GAAVN PRODUCTION PLAN\n\n=== SEQUENCE ===\n';
+  R.log.forEach(function(l,i){t+=(i+1)+'. '+l+'\n';});
+  t+='\n=== BATCH RECIPES ===\n';
+  (R.blocks||[]).forEach(function(b){
+    t+='\n'+b.product+' — '+fmt(b.out)+' '+b.unit+(b.short&&b.short.length?' [SHORT: '+b.short.join(', ')+']':'')+'\n';
+    if(!(b.short&&b.short.length))b.lines.forEach(function(l){t+='  '+l[0]+': '+fmt(l[1])+' '+l[2]+'\n';});
+  });
+  var inv=R.inv;
+  t+='\n=== INVENTORY AFTER ===\n';
+  t+='BM left: '+fmt(inv.bmL)+' L\nSkim left: '+fmt(inv.skimL)+' L\nFresh cream left: '+fmt(inv.creamKg)+' kg\nCream→Ghee: '+fmt(inv.excessCreamKg)+' kg\nCurd left: '+fmt(inv.curdKg)+' kg\n';
+  if(navigator.clipboard)navigator.clipboard.writeText(t).then(function(){toast('✓ Plan copied');},function(){toast('Copy failed');});
+}
 
-    prod.coag.forEach(c => {
-      const qty=c.per*vol;
-      let v;
-      if(c.u==='g/L') v=`${(qty/1000).toFixed(3)} kg`;
-      else if(c.u==='ml/L') v=`${qty.toFixed(0)} ml`;
-      else v=`${qty.toFixed(1)} L`;
-      msg+=`${c.n} ${v}\n`;
+// ---- persistence ------------------------------------------------------
+function saveState(){
+  STATE.intake=readIntake();
+  var payload={intake:STATE.intake,plan:STATE.plan,std:{
+    creamFat:$('s-creamFat').value,creamSnf:$('s-creamSnf').value,density:$('s-density').value,
+    skimFat:$('s-skimFat').value,skimSnf:$('s-skimSnf').value,chakka:$('s-chakka').value,
+    mfFat:$('s-mfFat').value,mfSnf:$('s-mfSnf').value,malaiFat:$('s-malaiFat').value,malaiSnf:$('s-malaiSnf').value
+  }};
+  try{localStorage.setItem(LS,JSON.stringify(payload));}catch(e){}
+}
+function loadState(){
+  var raw;try{raw=JSON.parse(localStorage.getItem(LS)||'null');}catch(e){raw=null;}
+  // vendor rows
+  for(var i=0;i<VENDORS;i++)addVendorRow();
+  if(raw&&raw.intake){
+    var tbl=$('intake-table');
+    raw.intake.forEach(function(v,idx){
+      if(idx+1>=tbl.rows.length)addVendorRow();
+      var ins=tbl.rows[idx+1].querySelectorAll('.vin');
+      ins.forEach(function(inp){if(v[inp.dataset.k])inp.value=v[inp.dataset.k];});
     });
-    msg+='\n';
-  });
-
-  msg+=`_Gaavn Fresh · Recipe Calculator_`;
-
-  navigator.clipboard.writeText(msg).catch(()=>{
-    const t=document.createElement('textarea'); t.value=msg;
-    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-  });
-  showToast('✓ All recipes copied for WhatsApp!');
-}
-
-// ══ SHEET LOGGING ══
-async function logToSheet() {
-  let url = localStorage.getItem('recipe_sheet_url');
-  if(!url) { url=prompt('Enter Google Sheet Web App URL:'); if(!url) return; localStorage.setItem('recipe_sheet_url',url); }
-  const pool=STATE.pool||getMilkPool();
-  const date=new Date().toISOString().slice(0,10);
-  let logged=0;
-  for(const prod of PRODUCTS) {
-    const vol=STATE.batchVol[prod.id]||0; if(vol===0) continue;
-    try {
-      const params=new URLSearchParams({action:'logRecipe',date,product:prod.name,
-        batchVol:vol,targetFat:prod.fat,milkBase:prod.milkBase,
-        bmFat:pool.bmFat,cmFat:pool.cmFat,smFat:pool.smFat,
-        bmSnf:pool.bmSnf,cmSnf:pool.cmSnf,smSnf:pool.smSnf,
-        stock:STATE.stock[prod.id]||0,demand:STATE.demand[prod.id]||0,
-        createdBy:'recipe-app'});
-      await fetch(url+'?'+params.toString());
-      logged++;
-    } catch(e){}
   }
-  showToast(`✓ ${logged} recipes logged to Sheet`);
+  if(raw&&raw.std){var m=raw.std;var map={'s-creamFat':'creamFat','s-creamSnf':'creamSnf','s-density':'density','s-skimFat':'skimFat','s-skimSnf':'skimSnf','s-chakka':'chakka','s-mfFat':'mfFat','s-mfSnf':'mfSnf','s-malaiFat':'malaiFat','s-malaiSnf':'malaiSnf'};for(var id in map){if(m[map[id]]!==undefined&&m[map[id]]!=='')$(id).value=m[map[id]];}}
+  if(raw&&raw.plan)STATE.plan=raw.plan;
 }
 
-// ══ NAVIGATION ══
-let currentStep=1;
-function goStep(n) {
-  const guides = {
-    1: '📋 Enter closing stock and tomorrow\'s orders for each product. The app will calculate how much milk to order.',
-    2: '📞 Call vendors with these quantities. V1 is fixed supply — V2 and V3 are on order. Enter today\'s expected V1 fat & SNF readings.',
-    3: '🥛 Milk is now in the plant. Enter actual quantities and quality received from each vendor. The app auto-fills from Step 2 — just correct anything different.',
-    4: '🕐 Review the production schedule based on when milk arrived.',
-    5: '🧀 Final recipe with exact quantities. Copy and send to production WhatsApp group.'
-  };
-  const guideEl = document.getElementById('step-guide');
-  if(guideEl) guideEl.textContent = guides[n] || '';
-  if(n===2) { calcMilkOrder(); }
-  if(n===3) { STATE.pool=getMilkPool(); }
-  if(n===4) { STATE.pool=getMilkPool(); calculateAndRenderRecipes(); }
-  currentStep=n;
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById('screen-step'+n).classList.add('active');
-  ['s1','s2','s3','s4'].forEach((id,i)=>{
-    const b=document.getElementById(id);
-    if(!b) return;
-    b.classList.remove('active','done');
-    if(i+1===n) b.classList.add('active');
-    else if(i+1<n) b.classList.add('done');
-  });
-  const bar=document.getElementById('bottom-bar');
-  const nextLabels = {
-    1: 'See milk order →',
-    2: 'Enter actual milk →',
-    3: 'Get recipe →'
-  };
-  if(n===4) {
-    bar.innerHTML=`<button class="btn btn-secondary" onclick="prevStep()">← Back</button>
-      <button class="btn btn-wa" onclick="copyAll()">📲 Copy All for WhatsApp</button>`;
-  } else {
-    bar.innerHTML=`
-      <button class="btn btn-secondary" id="btn-back" onclick="prevStep()" style="display:${n>1?'block':'none'}">← Back</button>
-      <button class="btn btn-primary" id="btn-next" onclick="nextStep()">${nextLabels[n]||'Next →'}</button>`;
-  }
-  window.scrollTo(0,0);
-}
-function nextStep() {
-  if(currentStep===1) {
-    const hasAny=PRODUCTS.some(p=>(STATE.demand[p.id]||0)>0||(STATE.stock[p.id]||0)>0);
-    if(!hasAny){showToast('Enter at least one product demand');return;}
-  }
-  goStep(Math.min(4,currentStep+1));
-}
-function prevStep(){goStep(Math.max(1,currentStep-1));}
+function runPlan(){
+  var s=std();var pool=buildPool();
+  if(pool.bm.qty+pool.cm.qty<=0){toast('Enter milk intake first');return;}
+  var planned={};STATE.plan.forEach(function(b){planned[b.product]=(planned[b.product]||0)+b.qty;});
+  var log=[],shortages=[],blocks=[];
+  var inv={bmL:pool.bm.qty,cmL:pool.cm.qty,skimL:0,creamKg:0,curdKg:0,chakkaKg:0,excessCreamKg:0,purchased:{},finished:{}};
 
-// ══ TOAST ══
-let tt;
-function showToast(msg){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  clearTimeout(tt); tt=setTimeout(()=>t.classList.remove('show'),2800);
-}
+  var khoyaOut=planned["CM Khoya"]||0;var kdef=PRODUCTS["CM Khoya"];var cmReserved=0;
+  if(khoyaOut>0){cmReserved=kdef.consumes.CM*(khoyaOut/kdef.output);if(cmReserved>inv.cmL+0.01)shortages.push("Khoya needs "+fmt(cmReserved)+" L CM but only "+fmt(inv.cmL)+" L available");}
+  log.push("Received BM "+fmt(inv.bmL)+" L ("+r2(pool.bm.fat)+"% fat / "+r2(pool.bm.snf)+"% SNF), CM "+fmt(inv.cmL)+" L ("+r2(pool.cm.fat)+"% fat / "+r2(pool.cm.snf)+"% SNF).");
+  log.push("Reserved "+fmt(cmReserved)+" L cow milk for Khoya (whole, before separation).");
+  var cmForSep=Math.max(0,inv.cmL-cmReserved);
+  var sep=separate(cmForSep,pool.cm.fat,pool.cm.snf);
+  inv.skimL+=sep.skimL;inv.creamKg+=sep.creamKg;
+  log.push("Separated "+fmt(cmForSep)+" L cow milk → Fresh Cream "+fmt(sep.creamKg)+" kg + Skim "+fmt(sep.skimL)+" L.");
 
-// ══ QUICK RECIPE MODE ══
-let quickModeActive = false;
-
-function toggleQuickMode() {
-  quickModeActive = !quickModeActive;
-  const mainContent = document.querySelector('.stepper');
-  const stepGuide   = document.getElementById('step-guide');
-  const bottomBar   = document.getElementById('bottom-bar');
-  const qrScreen    = document.getElementById('quick-recipe-screen');
-  const qrBtn       = document.getElementById('quick-btn');
-  const allScreens  = document.querySelectorAll('.screen');
-
-  if(quickModeActive) {
-    allScreens.forEach(s => s.style.display='none');
-    mainContent.style.display='none';
-    if(stepGuide) stepGuide.style.display='none';
-    qrScreen.style.display='block';
-    bottomBar.style.display='none';
-    qrBtn.textContent='✕ Exit Quick';
-    qrBtn.style.background='rgba(192,57,43,.8)';
-    renderQuickProductRows();
-  } else {
-    allScreens.forEach(s => s.style.display='');
-    mainContent.style.display='';
-    if(stepGuide) stepGuide.style.display='';
-    qrScreen.style.display='none';
-    bottomBar.style.display='';
-    qrBtn.textContent='⚡ Quick';
-    qrBtn.style.background='rgba(255,255,255,.2)';
-    goStep(currentStep); // restore current step
-  }
-}
-
-function renderQuickProductRows() {
-  const html = PRODUCTS.map(p => `
-    <div style="display:grid;grid-template-columns:auto 1fr 90px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:18px;">${p.icon}</span>
-      <div><div style="font-size:13px;font-weight:700;">${p.name}</div>
-           <div style="font-size:10px;color:var(--muted);">${p.fat}% fat · ${p.milkBase}</div></div>
-      <div>
-        <input type="number" id="qr-batch-${p.id}" placeholder="0" min="0" step="50"
-          style="border:1.5px solid var(--border);border-radius:8px;padding:7px 6px;font-size:13px;font-weight:700;text-align:right;width:100%;background:var(--cream);font-family:inherit;"
-          oninput="calcQuickRecipe()">
-        <div style="font-size:9px;color:var(--muted);text-align:center;margin-top:2px;">litres</div>
-      </div>
-    </div>`).join('');
-  document.getElementById('qr-product-rows').innerHTML = html;
-}
-
-function calcQuickRecipe() {
-  const g = id => parseFloat(document.getElementById(id)?.value)||0;
-
-  const pool = {
-    bmVol:  g('qr-bm-vol'), bmFat:  g('qr-bm-fat')||6.5, bmSnf: g('qr-bm-snf')||9.0,
-    cmVol:  g('qr-cm-vol'), cmFat:  g('qr-cm-fat')||4.0, cmSnf: g('qr-cm-snf')||8.5,
-    smVol:  g('qr-sm-vol'), smFat:  g('qr-sm-fat')||0.1, smSnf: g('qr-sm-snf')||8.5,
-    creamKg:g('qr-cream-kg'),
-  };
-  const creamFatPct   = g('qr-cream-fat')||60;
-  const bmRatio       = g('qr-bm-ratio')/100 || 0.20;
-  const snfLiteCurd   = g('qr-snf-curd-lite')||11.5;
-  const snfFreshCurd  = g('qr-snf-curd-fresh')||10.5;
-
-  let html = '';
-  let bmUsed=0, smUsed=0, creamUsed=0;
-
-  PRODUCTS.forEach(prod => {
-    const vol = g('qr-batch-'+prod.id);
-    if(vol === 0) return;
-
-    let bmV=0, cmV=0, smV=0, creamKg=0, smpKg=0, warnings=[];
-
-    if(prod.fromCurd) {
-      const ings = prod.coag.map(c => fmtIng(c.n, c.per*vol, c.u));
-      html += recipeCard(prod, vol, 0, vol, [{label:'From Fresh Curd batch',qty:'',unit:''}], ings, [], pool, null, null, 0);
-      return;
+  PRIORITY.forEach(function(prod){
+    var out=planned[prod]||0;if(out<=0)return;
+    var def=PRODUCTS[prod];var factor=out/def.output;
+    var block={product:prod,out:out,unit:def.unit,lines:[],short:[],actual:0};
+    if(def.type==='paneer'){
+      var t=s[def.targetKey];var nm=def.nominalMix;
+      var mixMass=((nm.BM+nm.SM)*s.density+nm.Cream)*factor;
+      var sol=solvePaneer(mixMass,t.fat,t.snf,pool,{bmL:inv.bmL,skimL:inv.skimL,creamKg:inv.creamKg},out);
+      if(!sol.feasible){
+        block.short=(sol.short&&sol.short.length)?sol.short:['infeasible'];
+        block.maxOut=sol.maxOut;
+        shortages.push(prod+": short of "+block.short.join(', ')+((sol.maxOut>0)?" (max makeable ≈ "+fmt(sol.maxOut)+" "+def.unit+" at this spec)":""));
+      }
+      else{
+        inv.bmL-=sol.bmL;inv.skimL-=sol.skimL;inv.creamKg-=sol.creamKg;
+        block.lines.push(['BM (buffalo milk)',sol.bmL,'L']);
+        block.lines.push(['Skim milk',sol.skimL,'L']);
+        block.lines.push(['Fresh cream',sol.creamKg,'kg']);
+        for(var a in def.additives){block.lines.push([a,def.additives[a]*factor,def.additiveUnits[a]]);addPurch(inv,a,def.additives[a]*factor);}
+        block.mixInfo="Standardised to "+t.fat+"% fat / "+t.snf+"% SNF (BM "+fmt(sol.bmL)+" L + Skim "+fmt(sol.skimL)+" L + Cream "+fmt(sol.creamKg)+" kg)";
+        inv.finished[prod]=(inv.finished[prod]||0)+out;
+      }
+    } else if(def.type==='khoya'){
+      var needCM=def.consumes.CM*factor,needSM=def.consumes.SM*factor,sh=[];
+      if(needCM>cmReserved+0.01)sh.push("CM "+fmt(needCM-cmReserved)+" L");
+      if(needSM>inv.skimL+0.01)sh.push("Skim "+fmt(needSM-inv.skimL)+" L");
+      if(sh.length){block.short=sh;shortages.push(prod+": "+sh.join(', '));}
+      else{cmReserved-=needCM;inv.skimL-=needSM;
+        block.lines.push(['Cow milk (reserved)',needCM,'L']);block.lines.push(['Skim milk',needSM,'L']);
+        for(var a2 in def.additives){block.lines.push([a2,def.additives[a2]*factor,def.additiveUnits[a2]]);addPurch(inv,a2,def.additives[a2]*factor);}
+        inv.finished[prod]=(inv.finished[prod]||0)+out;}
+    } else if(def.type==='curd'){
+      var needSk=def.consumes.SM*factor;
+      if(needSk>inv.skimL+0.01){block.short=["Skim "+fmt(needSk-inv.skimL)+" L"];shortages.push(prod+": "+block.short.join(', '));}
+      else{inv.skimL-=needSk;inv.curdKg+=out;
+        block.lines.push(['Skim milk',needSk,'L']);
+        for(var a3 in def.additives){block.lines.push([a3,def.additives[a3]*factor,def.additiveUnits[a3]]);addPurch(inv,a3,def.additives[a3]*factor);}
+        block.note="Produces "+fmt(out)+" kg curd → curd inventory";
+        inv.finished[prod]=(inv.finished[prod]||0)+out;}
+    } else if(def.type==='curd-derived'){
+      var sh2=[],needCurd=0,needChakka=0;
+      if(def.usesChakka){needChakka=def.consumes.Chakka*factor;needCurd=needChakka/s.chakka;if(needCurd>inv.curdKg+0.01)sh2.push("Curd "+fmt(needCurd-inv.curdKg)+" kg (for "+fmt(needChakka)+" kg chakka)");}
+      else{needCurd=def.consumes.Curd*factor;if(needCurd>inv.curdKg+0.01)sh2.push("Curd "+fmt(needCurd-inv.curdKg)+" kg");}
+      if(sh2.length){block.short=sh2;shortages.push(prod+": "+sh2.join(', '));}
+      else{inv.curdKg-=needCurd;
+        if(def.usesChakka)block.lines.push(['Chakka (from '+fmt(needCurd)+' kg curd)',needChakka,'kg']);
+        else block.lines.push(['Curd',needCurd,'kg']);
+        for(var a4 in def.additives){block.lines.push([a4,def.additives[a4]*factor,def.additiveUnits[a4]]);addPurch(inv,a4,def.additives[a4]*factor);}
+        inv.finished[prod]=(inv.finished[prod]||0)+out;}
     }
-
-    if(prod.milkBase==='BM_SM') {
-      bmV = vol * bmRatio;
-      smV = vol - bmV;
-      const fatFromMilk = bmV*(pool.bmFat/100) + smV*(pool.smFat/100);
-      const fatNeeded   = vol * 1.032 * (prod.fat/100);
-      creamKg = Math.max(0, (fatNeeded - fatFromMilk) / (creamFatPct/100));
-      bmUsed += bmV; smUsed += smV; creamUsed += creamKg;
-      if(bmV > pool.bmVol) warnings.push('Need '+bmV.toFixed(0)+'L BM, only '+pool.bmVol+'L available');
-      if(smV > pool.smVol) warnings.push('Need '+smV.toFixed(0)+'L SM, only '+pool.smVol+'L available');
-      if(creamKg > pool.creamKg) warnings.push('Need '+creamKg.toFixed(2)+'kg cream, only '+pool.creamKg+'kg available');
-    } else if(prod.milkBase==='CM') {
-      cmV = vol;
-      if(cmV > pool.cmVol) warnings.push('Need '+cmV+'L CM, only '+pool.cmVol+'L available');
-    } else if(prod.milkBase==='SM') {
-      smV = vol; smUsed += smV;
-      if(smV > pool.smVol) warnings.push('Need '+smV+'L SM, only '+pool.smVol+'L available');
-    } else if(prod.milkBase==='CM_SM') {
-      const b = pearson(vol, prod.fat, pool.cmFat, pool.smFat);
-      cmV = b.aVol; smV = b.bVol; smUsed += smV;
-    }
-
-    // SNF / SMP
-    let targetSnf=null, milkSnf=0, milkDensity=1.030;
-    if(prod.id==='curd_lite')  { targetSnf=snfLiteCurd;  milkSnf=pool.smSnf||8.5; milkDensity=1.032; }
-    if(prod.id==='curd_fresh') { targetSnf=snfFreshCurd; milkSnf=pool.cmSnf||8.5; milkDensity=1.028; }
-    if(targetSnf) smpKg = calcSMP(vol, milkSnf, targetSnf, milkDensity);
-
-    const milkRows = [];
-    if(bmV>0) milkRows.push({label:'Buffalo Milk (BM)',qty:bmV.toFixed(0),unit:'L'});
-    if(cmV>0) milkRows.push({label:'Cow Milk (CM)',qty:cmV.toFixed(0),unit:'L'});
-    if(smV>0) milkRows.push({label:'Skim Milk (SM)',qty:smV.toFixed(0),unit:'L'});
-    if(creamKg>0) milkRows.push({label:'Cream',qty:creamKg.toFixed(2),unit:'kg'});
-
-    const addIng = [];
-    if(smpKg>0) addIng.push({name:'SMP', display:{qty:smpKg.toFixed(3)+' kg'}});
-    prod.coag.forEach(c => addIng.push(fmtIng(c.n, c.per*vol, c.u)));
-
-    html += recipeCard(prod, vol, 0, vol, milkRows, addIng, warnings, pool, targetSnf, milkSnf, smpKg);
+    blocks.push(block);
   });
 
-  if(!html) {
-    html = '<div class="card" style="color:var(--muted);text-align:center;padding:20px;">Enter batch sizes above</div>';
-  }
-  document.getElementById('qr-recipe-output').innerHTML = html;
+  inv.excessCreamKg=Math.max(0,inv.creamKg);
+  if(inv.excessCreamKg>0.001)log.push("Excess fresh cream "+fmt(inv.excessCreamKg)+" kg → cream inventory (for Ghee).");
+
+  STATE.lastRun={log:log,inv:inv,shortages:shortages,blocks:blocks,cmReservedLeft:cmReserved,planned:planned,pool:pool};
+  renderResults();saveState();
 }
 
-function copyQuickAll() {
-  const g = id => parseFloat(document.getElementById(id)?.value)||0;
-  const pool = {
-    bmFat:g('qr-bm-fat')||6.5, smFat:g('qr-sm-fat')||0.1,
-    cmFat:g('qr-cm-fat')||4.0, bmVol:g('qr-bm-vol'), smVol:g('qr-sm-vol')
-  };
-  const creamFatPct = g('qr-cream-fat')||60;
-  const bmRatio     = g('qr-bm-ratio')/100 || 0.20;
-  const snfLiteCurd = g('qr-snf-curd-lite')||11.5;
-  const snfFreshCurd= g('qr-snf-curd-fresh')||10.5;
-
-  const date = new Date().toLocaleDateString('en-IN');
-  let msg = `*🧀 Gaavn Fresh — Recipes*\n📅 ${date}\n\n`;
-
-  PRODUCTS.forEach(prod => {
-    const vol = g('qr-batch-'+prod.id);
-    if(vol===0) return;
-    msg += `━━━━━━━━━━━━\n*${prod.icon} ${prod.name}* — ${vol}L\n`;
-    if(prod.fromCurd) { msg += `From Fresh Curd batch\n\n`; return; }
-    if(prod.milkBase==='BM_SM') {
-      const bmV=vol*bmRatio, smV=vol-bmV;
-      const fatFromMilk=bmV*(pool.bmFat/100)+smV*(pool.smFat/100);
-      const crKg=Math.max(0,(vol*1.032*(prod.fat/100)-fatFromMilk)/(creamFatPct/100));
-      if(bmV>0) msg+=`BM  ${bmV.toFixed(0)}lit\n`;
-      if(smV>0) msg+=`SM  ${smV.toFixed(0)}lit\n`;
-      if(crKg>0) msg+=`Cream  ${crKg.toFixed(2)}kg\n`;
-    } else if(prod.milkBase==='CM') msg+=`CM  ${vol}lit\n`;
-    else if(prod.milkBase==='SM')   msg+=`SM  ${vol}lit\n`;
-
-    let smpKg=0;
-    if(prod.id==='curd_lite')  smpKg=calcSMP(vol,g('qr-sm-snf')||8.5,snfLiteCurd,1.032);
-    if(prod.id==='curd_fresh') smpKg=calcSMP(vol,g('qr-cm-snf')||8.5,snfFreshCurd,1.028);
-    if(smpKg>0) msg+=`SMP  ${smpKg.toFixed(3)}kg\n`;
-    prod.coag.forEach(c => {
-      const qty=c.per*vol;
-      let v = c.u==='g/L' ? (qty/1000).toFixed(3)+' kg' : c.u==='ml/L' ? qty.toFixed(0)+' ml' : qty.toFixed(1)+' L';
-      msg+=`${c.n}  ${v}\n`;
-    });
-    msg+=`\n`;
-  });
-  msg+=`_Gaavn Fresh · Recipe Calculator_`;
-
-  navigator.clipboard.writeText(msg).catch(()=>{
-    const t=document.createElement('textarea'); t.value=msg;
-    document.body.appendChild(t); t.select(); document.execCommand('copy'); document.body.removeChild(t);
-  });
-  showToast('✓ All recipes copied for WhatsApp!');
-}
-
-// ══ INIT ══
-renderDemandRows();
+// ---- init -------------------------------------------------------------
+refreshProductDropdown();
+loadState();
+renderPlan();
+['s-creamFat','s-creamSnf','s-density','s-skimFat','s-skimSnf','s-chakka','s-mfFat','s-mfSnf','s-malaiFat','s-malaiSnf'].forEach(function(id){$(id).addEventListener('input',saveState);});
 </script>
 </body>
 </html>
