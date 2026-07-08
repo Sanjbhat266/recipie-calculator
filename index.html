@@ -398,8 +398,12 @@ function renderResults(){
   if(fk.length){h+='<hr><div class="muted" style="margin-bottom:6px;">Finished goods produced:</div>';h+=fk.map(function(k){return '<div class="ing"><span>'+k+'</span><span>'+fmt(inv.finished[k])+' '+PRODUCTS[k].unit+'</span></div>';}).join('');}
   h+='</div>';
 
-  // export
-  h+='<div class="card"><button class="btn-primary" onclick="copyPlan()">📋 Copy full plan</button></div>';
+  // export (full data: milk intake -> plan; excludes Standards & Targets)
+  h+='<div class="card"><h3>Export</h3><div style="display:flex;gap:8px;flex-wrap:wrap;">'
+    +'<button class="btn-primary btn-sm" onclick="exportReport(\'copy\')">📋 Copy all data</button>'
+    +'<button class="btn-sec btn-sm" onclick="exportReport(\'csv\')">⬇ CSV</button>'
+    +'<button class="btn-sec btn-sm" onclick="exportReport(\'pdf\')">🖨 PDF</button>'
+    +'</div><div class="muted small" style="margin-top:6px;">Covers milk intake → pool → sequence → batches → cream balance → inventory, with date. (Standards & targets excluded.)</div></div>';
 
   $('results').innerHTML=h;
 }
@@ -414,6 +418,7 @@ function renderBlocks(){
     out+='<div class="result-block'+cls+'">';
     out+='<h4>'+b.product+' — '+fmt(b.out)+' '+b.unit+' '+(b.short&&b.short.length?'<span class="pill short">SHORT</span>':'<span class="pill ok">OK</span>')+'</h4>';
     if(b.mixInfo)out+='<div class="muted small" style="margin-bottom:6px;">'+b.mixInfo+'</div>';
+    if(b.textureWarn)out+='<div class="warn">\u26a0 BM used below the standard quantity \u2014 cream was substituted for the missing fat. Paneer texture / firmness may be affected.</div>';
     if(b.note)out+='<div class="muted small" style="margin-bottom:6px;">'+b.note+'</div>';
     if(b.short&&b.short.length){
       out+='<div class="warn">Short of: '+b.short.join(', ')+(b.maxOut>0?'<br>Max makeable at this spec ≈ <b>'+fmt(b.maxOut)+' '+b.unit+'</b>':'')+'</div>';
@@ -522,6 +527,7 @@ function runPlan(){
         for(var a in def.additives){block.lines.push([a,def.additives[a]*factor,def.additiveUnits[a]]);addPurch(inv,a,def.additives[a]*factor);}
         block.mixInfo="Fat held at "+t.fat+"% \u00b7 resulting SNF "+r2(sol.snfPct)+"% (not targeted)"+(sol.bmLeaned?" \u00b7 BM short \u2192 cream+skim covered it":"");
         block.predicted=sol.predicted;
+        block.textureWarn=sol.bmLeaned;
         inv.finished[prod]=(inv.finished[prod]||0)+out;
       }
     } else if(def.type==='khoya'){
@@ -605,6 +611,99 @@ function applyCalib(){
   document.getElementById('modal-calib').classList.remove('open');
   if(STATE.lastRun)runPlan();
   toast('✓ Yield factor set to '+r2(_calibFactor));
+}
+
+// ---- FULL DATA EXPORT (copy / csv / pdf) -----------------------------
+function _repDate(){var d=new Date();return d.toLocaleDateString('en-IN')+' '+d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});}
+function _repDateFile(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+function buildReportSections(){
+  var pool=buildPool(); var rows=readIntake(); var R=STATE.lastRun;
+  var S=[];
+  // Milk intake
+  var intake=[['Vendor','BM Qty(L)','BM Fat%','BM SNF%','CM Qty(L)','CM Fat%','CM SNF%','SM Qty(L)','SM SNF%']];
+  rows.forEach(function(v,i){ if(v.BmQty||v.CmQty||v.SmQty) intake.push(['V'+(i+1),v.BmQty,v.BmFat,v.BmSnf,v.CmQty,v.CmFat,v.CmSnf,v.SmQty,v.SmSnf]); });
+  S.push({title:'MILK INTAKE',table:intake});
+  // Pool
+  S.push({title:'MILK POOL',table:[['Stream','Qty (L)','Fat %','SNF %'],
+    ['Buffalo (BM)',r2(pool.bm.qty),r2(pool.bm.fat),r2(pool.bm.snf)],
+    ['Cow (CM)',r2(pool.cm.qty),r2(pool.cm.fat),r2(pool.cm.snf)],
+    ['Skim direct (SM)',r2(pool.sm.qty),'-',r2(pool.sm.snf)]]});
+  if(R){
+    S.push({title:'PRODUCTION SEQUENCE',lines:R.log.map(function(l,i){return (i+1)+'. '+l;})});
+    // batches
+    var bt=[['Product','Item','Qty','Unit']];
+    var yt=[['Product','Recipe target','Predicted','Actual','Yield %']];
+    R.blocks.forEach(function(b){
+      if(b.short&&b.short.length){ bt.push([b.product,'SHORT: '+b.short.join('; '),'','']); return; }
+      b.lines.forEach(function(l){ bt.push([b.product,l[0],r2(l[1]),l[2]]); });
+      var base=(b.predicted!=null)?b.predicted:b.out;
+      var yp=(b.actual&&base>0)?r2(b.actual/base*100):'';
+      yt.push([b.product,r2(b.out),(b.predicted!=null?r2(b.predicted):''),(b.actual||''),yp]);
+    });
+    S.push({title:'BATCH RECIPES',table:bt});
+    S.push({title:'YIELD',table:yt});
+    var inv=R.inv, cs=R.freshCreamTotal||0, cg=inv.excessCreamKg||0;
+    S.push({title:'CREAM BALANCE',table:[['Item','kg'],
+      ['Fresh cream separated',r2(cs)],['Used in paneer',r2(Math.max(0,cs-cg))],['Left for Ghee',r2(cg)]]});
+    var invTbl=[['Item','Value']];
+    invTbl.push(['BM left (L)',r2(inv.bmL)]);invTbl.push(['CM reserved left (L)',r2(R.cmReservedLeft)]);
+    invTbl.push(['Skim left (L)',r2(inv.skimL)]);invTbl.push(['Fresh cream left (kg)',r2(inv.creamKg)]);
+    invTbl.push(['Curd left (kg)',r2(inv.curdKg)]);
+    Object.keys(inv.purchased).forEach(function(k){invTbl.push([k+' used',r2(inv.purchased[k])]);});
+    Object.keys(inv.finished).forEach(function(k){invTbl.push([k+' produced',r2(inv.finished[k])+' '+PRODUCTS[k].unit]);});
+    S.push({title:'INVENTORY AFTER',table:invTbl});
+  }
+  return S;
+}
+function _secToText(sec){
+  var t='=== '+sec.title+' ===\n';
+  if(sec.lines){ t+=sec.lines.join('\n')+'\n'; }
+  else if(sec.table){ sec.table.forEach(function(r){ t+=r.join(' | ')+'\n'; }); }
+  return t;
+}
+function _csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?('"'+v.replace(/"/g,'""')+'"'):v; }
+function exportReport(kind){
+  var secs=buildReportSections();
+  var head='GAAVN PRODUCTION PLAN — '+_repDate();
+  if(kind==='copy'){
+    var t=head+'\n\n'+secs.map(_secToText).join('\n');
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(function(){toast('✓ All data copied');},function(){toast('Copy failed');});}
+    else toast('Copy not supported');
+    return;
+  }
+  if(kind==='csv'){
+    var csv='GAAVN PRODUCTION PLAN,'+_csvCell(_repDate())+'\n\n';
+    secs.forEach(function(sec){
+      csv+=sec.title+'\n';
+      if(sec.lines){ sec.lines.forEach(function(l){ csv+=_csvCell(l)+'\n'; }); }
+      else if(sec.table){ sec.table.forEach(function(r){ csv+=r.map(_csvCell).join(',')+'\n'; }); }
+      csv+='\n';
+    });
+    var blob=new Blob([csv],{type:'text/csv'});
+    var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Gaavn_Production_'+_repDateFile()+'.csv';a.click();URL.revokeObjectURL(a.href);
+    toast('✓ CSV downloaded');
+    return;
+  }
+  if(kind==='pdf'){
+    var html='<h1 style="font-size:18px;margin:0 0 2px;">GAAVN Production Plan</h1><div style="color:#666;margin-bottom:14px;">'+_repDate()+'</div>';
+    secs.forEach(function(sec){
+      html+='<h3 style="margin:16px 0 6px;color:#1b5e20;border-bottom:1px solid #ccc;padding-bottom:3px;">'+sec.title+'</h3>';
+      if(sec.lines){ html+='<div style="font-size:12px;line-height:1.6;">'+sec.lines.map(function(l){return l.replace(/</g,'&lt;');}).join('<br>')+'</div>'; }
+      else if(sec.table){
+        html+='<table style="width:100%;border-collapse:collapse;font-size:12px;">';
+        sec.table.forEach(function(r,ri){
+          html+='<tr>'+r.map(function(c){var tag=ri===0?'th':'td';return '<'+tag+' style="border:1px solid #ddd;padding:4px 6px;text-align:'+(ri===0?'left':'left')+';background:'+(ri===0?'#f4f1e8':'#fff')+';">'+String(c==null?'':c).replace(/</g,'&lt;')+'</'+tag+'>';}).join('')+'</tr>';
+        });
+        html+='</table>';
+      }
+    });
+    var w=window.open('','_blank');
+    if(!w){toast('Allow pop-ups to make the PDF');return;}
+    w.document.write('<html><head><title>Gaavn Production '+_repDateFile()+'</title></head><body style="font-family:Arial,sans-serif;padding:18px;">'+html+'<script>window.onload=function(){setTimeout(function(){window.print();},250);}<\/script></body></html>');
+    w.document.close();
+    return;
+  }
 }
 
 // ---- init -------------------------------------------------------------
