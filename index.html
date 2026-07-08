@@ -68,7 +68,7 @@ textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8
 <body>
 <header>
   <h1>🐄 GAAVN Production Planner</h1>
-  <div style="display:flex;gap:8px;align-items:center;"><button onclick="showSim()" style="background:#b8860b;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">💰 Simulator</button><span class="ver" id="ver">v4</span></div>
+  <div style="display:flex;gap:8px;align-items:center;"><button onclick="showSim()" style="background:#b8860b;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">💰 Simulator</button><span class="ver" id="ver">v5</span></div>
 </header>
 
 <div class="wrap" id="home-screen">
@@ -111,6 +111,7 @@ textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8
           <div class="field"><label>Low Fat Paneer target Fat %</label><input type="number" step="0.01" id="s-lfpFat" value="0.29"></div>
           <div class="field"><label>Malai Paneer target Fat %</label><input type="number" step="0.01" id="s-malaiFat" value="4.80"></div>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:600;"><input type="checkbox" id="s-paneerStd" checked style="width:auto;"> Use standard recipe quantities when milk is adequate (auto-substitute cream only when BM is short)</label>
         <div class="muted" style="margin:8px 0;">Paneer yield is computed from the solids going in: <b>recovered fat + recovered protein (from SNF) + retained moisture</b>. Tune these to your process:</div>
         <div class="grid3">
           <div class="field"><label>Fat recovery %</label><input type="number" step="1" id="s-fatRec" value="90"></div>
@@ -197,7 +198,7 @@ var PRODUCTS={
     additives:{PS:0.291,CaCl2:0.417,AA:695,Water:139},additiveUnits:{PS:"kg",CaCl2:"kg",AA:"ml",Water:"L"}},
  "Low Fat Paneer":{output:5.2,unit:"kg",type:"paneer",targetKey:"lfp",yieldPct:0.13,
     nominalMix:{BM:0,SM:40,Cream:0.13},
-    additives:{AA:0.40,PS:0.016,CaCl2:0.024},additiveUnits:{AA:"L",PS:"kg",CaCl2:"kg"}},
+    additives:{AA:0.40,CaCl2:0.024},additiveUnits:{AA:"L",CaCl2:"kg"}},
  "Malai Paneer":{output:8.4,unit:"kg",type:"paneer",targetKey:"malai",yieldPct:0.21,
     nominalMix:{BM:24,SM:16,Cream:0.645},
     additives:{AA:40,Water:8,PS:0.016,CaCl2:0.024},additiveUnits:{AA:"ml",Water:"L",PS:"kg",CaCl2:"kg"}},
@@ -232,6 +233,7 @@ function std(){
     skimFat:num('s-skimFat'),skimSnf:num('s-skimSnf'),chakka:(num('s-chakka')||50)/100,
     fatRec:(num('s-fatRec')||90)/100, snfRec:(num('s-snfRec')||60)/100, moist:(num('s-moist')||52)/100,
     yieldFactor:num('s-yieldFactor')||1,
+    paneerStd:(document.getElementById('s-paneerStd')?document.getElementById('s-paneerStd').checked:true),
     mf:{fat:num('s-mfFat')},
     lfp:{fat:num('s-lfpFat')},
     malai:{fat:num('s-malaiFat')}
@@ -489,7 +491,7 @@ function saveState(){
   var payload={intake:STATE.intake,plan:STATE.plan,std:{
     creamFat:$('s-creamFat').value,creamSnf:$('s-creamSnf').value,density:$('s-density').value,
     skimFat:$('s-skimFat').value,skimSnf:$('s-skimSnf').value,chakka:$('s-chakka').value,
-    mfFat:$('s-mfFat').value,lfpFat:$('s-lfpFat').value,malaiFat:$('s-malaiFat').value,fatRec:$('s-fatRec').value,snfRec:$('s-snfRec').value,moist:$('s-moist').value,yieldFactor:$('s-yieldFactor').value
+    mfFat:$('s-mfFat').value,lfpFat:$('s-lfpFat').value,malaiFat:$('s-malaiFat').value,fatRec:$('s-fatRec').value,snfRec:$('s-snfRec').value,moist:$('s-moist').value,yieldFactor:$('s-yieldFactor').value,paneerStd:($('s-paneerStd')?$('s-paneerStd').checked:true)
   }};
   try{localStorage.setItem(LS,JSON.stringify(payload));}catch(e){}
 }
@@ -506,6 +508,7 @@ function loadState(){
     });
   }
   if(raw&&raw.std){var m=raw.std;var map={'s-creamFat':'creamFat','s-creamSnf':'creamSnf','s-density':'density','s-skimFat':'skimFat','s-skimSnf':'skimSnf','s-chakka':'chakka','s-mfFat':'mfFat','s-lfpFat':'lfpFat','s-malaiFat':'malaiFat','s-fatRec':'fatRec','s-snfRec':'snfRec','s-moist':'moist','s-yieldFactor':'yieldFactor'};for(var id in map){if(m[map[id]]!==undefined&&m[map[id]]!=='')$(id).value=m[map[id]];}}
+  if(raw&&raw.std&&raw.std.paneerStd!==undefined&&document.getElementById('s-paneerStd'))document.getElementById('s-paneerStd').checked=raw.std.paneerStd;
   if(raw&&raw.plan)STATE.plan=raw.plan;
 }
 
@@ -532,26 +535,39 @@ function runPlan(){
     var block={product:prod,out:out,unit:def.unit,lines:[],short:[],actual:0};
     if(def.type==='paneer'){
       var t=s[def.targetKey];var nm=def.nominalMix;
-      var mixMass=((nm.BM+nm.SM)*s.density+nm.Cream)*factor;
       var nominalBML=nm.BM*factor;
-      var sol=solvePaneer(mixMass,t.fat,pool,{bmL:inv.bmL,skimL:inv.skimL,creamKg:inv.creamKg},out,nominalBML);
-      if(!sol.feasible){
-        block.short=(sol.short&&sol.short.length)?sol.short:['infeasible'];
-        block.maxOut=sol.maxOut;
-        shortages.push(prod+": short of "+block.short.join(', ')+((sol.maxOut>0)?" (max makeable \u2248 "+fmt(sol.maxOut)+" "+def.unit+")":""));
+      var bmUseL,skUseL,crUseKg,leaned=false,stdUsed=false;
+      if(s.paneerStd){
+        var nBM=nm.BM*factor,nSM=nm.SM*factor,nCr=nm.Cream*factor;
+        if(nBM<=inv.bmL+0.001 && nSM<=inv.skimL+0.001 && nCr<=inv.creamKg+0.001){
+          bmUseL=nBM;skUseL=nSM;crUseKg=nCr;stdUsed=true;
+        }
       }
+      if(!stdUsed){
+        var mixMass=((nm.BM+nm.SM)*s.density+nm.Cream)*factor;
+        var sol=solvePaneer(mixMass,t.fat,pool,{bmL:inv.bmL,skimL:inv.skimL,creamKg:inv.creamKg},out,nominalBML);
+        if(!sol.feasible){
+          block.short=(sol.short&&sol.short.length)?sol.short:['infeasible'];
+          block.maxOut=sol.maxOut;
+          shortages.push(prod+": short of "+block.short.join(', ')+((sol.maxOut>0)?" (max makeable \u2248 "+fmt(sol.maxOut)+" "+def.unit+")":""));
+          blocks.push(block); return;
+        }
+        bmUseL=sol.bmL;skUseL=sol.skimL;crUseKg=sol.creamKg;leaned=sol.bmLeaned;
+      }
+      inv.bmL-=bmUseL;inv.skimL-=skUseL;inv.creamKg-=crUseKg;
+      if(bmUseL>0.001)block.lines.push(['BM (buffalo milk)',bmUseL,'L']);
+      block.lines.push(['Skim milk',skUseL,'L']);
+      block.lines.push(['Fresh cream',crUseKg,'kg']);
+      for(var a in def.additives){block.lines.push([a,def.additives[a]*factor,def.additiveUnits[a]]);addPurch(inv,a,def.additives[a]*factor);}
+      if(def.yieldPct){block.predicted=def.yieldPct*(bmUseL+skUseL)*(s.yieldFactor||1);block.yieldNote='Avg yield '+r2(def.yieldPct*100)+'% of milk';}
       else{
-        inv.bmL-=sol.bmL;inv.skimL-=sol.skimL;inv.creamKg-=sol.creamKg;
-        block.lines.push(['BM (buffalo milk)',sol.bmL,'L']);
-        block.lines.push(['Skim milk',sol.skimL,'L']);
-        block.lines.push(['Fresh cream',sol.creamKg,'kg']);
-        for(var a in def.additives){block.lines.push([a,def.additives[a]*factor,def.additiveUnits[a]]);addPurch(inv,a,def.additives[a]*factor);}
-        block.mixInfo="Fat held at "+t.fat+"% \u00b7 resulting SNF "+r2(sol.snfPct)+"% (not targeted)"+(sol.bmLeaned?" \u00b7 BM short \u2192 cream+skim covered it":"");
-        block.predicted=sol.predicted;
-        if(def.yieldPct){block.predicted=def.yieldPct*(sol.bmL+sol.skimL)*(s.yieldFactor||1);block.yieldNote='Avg yield '+r2(def.yieldPct*100)+'% of milk';}
-        block.textureWarn=sol.bmLeaned;
-        inv.finished[prod]=(inv.finished[prod]||0)+out;
+        var fatM=bmUseL*s.density*pool.bm.fat/100+skUseL*s.density*s.skimFat/100+crUseKg*s.creamFat/100;
+        var snfM=bmUseL*s.density*pool.bm.snf/100+skUseL*s.density*s.skimSnf/100+crUseKg*s.creamSnf/100;
+        block.predicted=((1-s.moist>1e-6)?(s.fatRec*fatM+s.snfRec*snfM)/(1-s.moist):0)*(s.yieldFactor||1);
       }
+      block.mixInfo=stdUsed?('Standard recipe, scaled \u00d7'+r2(factor)):('Auto-standardised to fat '+t.fat+'%'+(leaned?' \u00b7 BM short \u2192 cream+skim covered it':''));
+      block.textureWarn=leaned;
+      inv.finished[prod]=(inv.finished[prod]||0)+out;
     } else if(def.type==='khoya'){
       var needCM=def.consumes.CM*factor,needSM=def.consumes.SM*factor,sh=[];
       if(needCM>cmReserved+0.01)sh.push("CM "+fmt(needCM-cmReserved)+" L");
@@ -744,8 +760,8 @@ var SIM_RATE_DEFS=[
  ['curd','Curd (intermediate)','₹/kg',60],
  ['packing','Packing','₹/kg out',1.6],
  ['gas','Gas / fuel','₹/kg out',3],
- ['labour','Labour','₹/kg out',5],
- ['overhead','Other direct / overhead','₹/kg out',3]
+ ['labour','Labour (FIXED)','₹/day',3000],
+ ['overhead','Other direct / overhead (FIXED)','₹/day',1500]
 ];
 function showSim(){document.getElementById('home-screen').style.display='none';document.getElementById('sim-screen').style.display='';renderSimRates();if(STATE.lastRun)computeCosts();window.scrollTo(0,0);}
 function hideSim(){document.getElementById('sim-screen').style.display='none';document.getElementById('home-screen').style.display='';window.scrollTo(0,0);}
@@ -776,15 +792,17 @@ function computeCosts(){
   var R=STATE.lastRun;var el=document.getElementById('sim-results');
   if(!R){el.innerHTML='<div class="card"><div class="muted">Run a production plan first, then come back.</div></div>';return;}
   var rt=simRates();var rows='';var total=0;
+  var totalOut=0; R.blocks.forEach(function(b){ if(!(b.short&&b.short.length)) totalOut+=(b.out||0); });
+  var fixedPerUnit = totalOut>0 ? ((rt.labour||0)+(rt.overhead||0))/totalOut : 0;
   R.blocks.forEach(function(b){
     if(b.short&&b.short.length)return;
     var cost=0;
     b.lines.forEach(function(l){
       var q=l[1]||0; var u=(l[2]||'').toLowerCase();
-      if(u==='ml'||u==='gm')q=q/1000;      // ml->L, gm->kg to match per-L/per-kg rates
+      if(u==='ml'||u==='gm')q=q/1000;
       cost+=q*simRateFor(l[0],rt);
     });
-    cost+=(b.out||0)*((rt.packing||0)+(rt.gas||0)+(rt.labour||0)+(rt.overhead||0));
+    cost+=(b.out||0)*((rt.packing||0)+(rt.gas||0)+fixedPerUnit);
     var perkg=b.out>0?cost/b.out:0;total+=cost;
     rows+='<div class="result-block"><h4>'+b.product+' — '+fmt(b.out)+' '+b.unit+'</h4>'
       +'<div class="ing"><span>Batch cost</span><span>₹'+fmt(cost)+'</span></div>'
@@ -795,7 +813,7 @@ function computeCosts(){
   var bmFatPerL=pool.bm.fat/100*dens;var fatBM=bmFatPerL>0?rt.bm/bmFatPerL:0;
   var fatCream=(std().creamFat>0)?rt.cream/(std().creamFat/100):0;
   var cheap=(fatBM>0&&fatBM<fatCream)?'BM':'Cream';
-  var out='<div class="card"><h3>Cost Breakdown</h3>'+rows
+  var out='<div class="card"><h3>Cost Breakdown</h3>'+'<div class="muted small" style="margin-bottom:8px;">Fixed labour+overhead \u20b9'+fmt((rt.labour||0)+(rt.overhead||0))+'/day over '+fmt(totalOut)+' units = \u20b9'+fmt(fixedPerUnit)+'/unit (falls as volume rises).</div>'+rows
     +'<hr><div class="ing"><span>Total ingredient + process cost</span><span>₹'+fmt(total)+'</span></div>'
     +'<div class="ing"><span>Less cream→ghee value ('+fmt(cg)+' kg)</span><span>− ₹'+fmt(creamVal)+'</span></div>'
     +'<div class="ing" style="font-weight:800;"><span>Net cost</span><span>₹'+fmt(total-creamVal)+'</span></div></div>';
@@ -811,6 +829,7 @@ refreshProductDropdown();
 loadState();
 renderPlan();
 ['s-creamFat','s-creamSnf','s-density','s-skimFat','s-skimSnf','s-chakka','s-mfFat','s-lfpFat','s-malaiFat','s-fatRec','s-snfRec','s-moist','s-yieldFactor'].forEach(function(id){$(id).addEventListener('input',saveState);});
+var _psTog=document.getElementById('s-paneerStd');if(_psTog)_psTog.addEventListener('change',saveState);
 </script>
 </body>
 </html>
