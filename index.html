@@ -68,7 +68,7 @@ textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8
 <body>
 <header>
   <h1>🐄 GAAVN Production Planner</h1>
-  <div style="display:flex;gap:8px;align-items:center;"><button onclick="showSim()" style="background:#b8860b;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">💰 Simulator</button><span class="ver" id="ver">v3</span></div>
+  <div style="display:flex;gap:8px;align-items:center;"><button onclick="showSim()" style="background:#b8860b;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">💰 Simulator</button><span class="ver" id="ver">v4</span></div>
 </header>
 
 <div class="wrap" id="home-screen">
@@ -663,6 +663,7 @@ function buildReportSections(){
       var yp=(b.actual&&base>0)?r2(b.actual/base*100):'';
       yt.push([b.product,r2(b.out),(b.predicted!=null?r2(b.predicted):''),(b.actual||''),yp]);
     });
+    var _lp=null; for(var _i=1;_i<bt.length;_i++){ if(bt[_i][0]===_lp){bt[_i][0]='';} else {_lp=bt[_i][0];} }
     S.push({title:'BATCH RECIPES',table:bt});
     S.push({title:'YIELD',table:yt});
     var inv=R.inv, cs=R.freshCreamTotal||0, cg=inv.excessCreamKg||0;
@@ -742,7 +743,9 @@ var SIM_RATE_DEFS=[
  ['sugar','Sugar','₹/kg',45],
  ['curd','Curd (intermediate)','₹/kg',60],
  ['packing','Packing','₹/kg out',1.6],
- ['gas','Gas / fuel','₹/kg out',3]
+ ['gas','Gas / fuel','₹/kg out',3],
+ ['labour','Labour','₹/kg out',5],
+ ['overhead','Other direct / overhead','₹/kg out',3]
 ];
 function showSim(){document.getElementById('home-screen').style.display='none';document.getElementById('sim-screen').style.display='';renderSimRates();if(STATE.lastRun)computeCosts();window.scrollTo(0,0);}
 function hideSim(){document.getElementById('sim-screen').style.display='none';document.getElementById('home-screen').style.display='';window.scrollTo(0,0);}
@@ -776,8 +779,12 @@ function computeCosts(){
   R.blocks.forEach(function(b){
     if(b.short&&b.short.length)return;
     var cost=0;
-    b.lines.forEach(function(l){cost+=(l[1]||0)*simRateFor(l[0],rt);});
-    cost+=(b.out||0)*((rt.packing||0)+(rt.gas||0));
+    b.lines.forEach(function(l){
+      var q=l[1]||0; var u=(l[2]||'').toLowerCase();
+      if(u==='ml'||u==='gm')q=q/1000;      // ml->L, gm->kg to match per-L/per-kg rates
+      cost+=q*simRateFor(l[0],rt);
+    });
+    cost+=(b.out||0)*((rt.packing||0)+(rt.gas||0)+(rt.labour||0)+(rt.overhead||0));
     var perkg=b.out>0?cost/b.out:0;total+=cost;
     rows+='<div class="result-block"><h4>'+b.product+' — '+fmt(b.out)+' '+b.unit+'</h4>'
       +'<div class="ing"><span>Batch cost</span><span>₹'+fmt(cost)+'</span></div>'
