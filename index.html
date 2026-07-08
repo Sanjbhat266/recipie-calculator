@@ -59,15 +59,19 @@ hr{border:none;border-top:1px solid var(--border);margin:10px 0;}
 .modal-ov.open{display:flex;}
 .modal-bx{background:#fff;border-radius:12px;padding:18px;max-width:540px;width:100%;max-height:86vh;overflow:auto;}
 textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px;font-family:monospace;font-size:12px;}
+#print-area{display:none;}
+@media print{ body>*:not(#print-area){display:none !important;} #print-area{display:block !important;padding:8px;} }
+.simrow{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;}
+.simrow input{max-width:120px;text-align:right;}
 </style>
 </head>
 <body>
 <header>
   <h1>🐄 GAAVN Production Planner</h1>
-  <span class="ver" id="ver">v2</span>
+  <div style="display:flex;gap:8px;align-items:center;"><button onclick="showSim()" style="background:#b8860b;color:#fff;border:none;border-radius:8px;padding:6px 10px;font-size:12px;font-weight:700;cursor:pointer;">💰 Simulator</button><span class="ver" id="ver">v3</span></div>
 </header>
 
-<div class="wrap">
+<div class="wrap" id="home-screen">
 
   <!-- 1. MILK INTAKE -->
   <div class="card">
@@ -157,6 +161,17 @@ textarea{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8
     </div>
     <div id="calib-result" style="margin-top:12px;"></div>
   </div>
+</div>
+
+<div id="print-area"></div>
+<div class="wrap" id="sim-screen" style="display:none;">
+  <div style="display:flex;align-items:center;gap:10px;margin:4px 0 12px;">
+    <button onclick="hideSim()" class="btn-sec btn-sm">← Back to Planner</button>
+    <h2 style="margin:0;font-size:16px;color:var(--green-d);">💰 Cost Simulator</h2>
+  </div>
+  <div class="card"><h3>Ingredient Rates <span class="sub">₹ per unit — edit to match your production tracker</span></h3><div id="sim-rates"></div></div>
+  <div class="card"><button class="btn-blue" onclick="computeCosts()">▶ Compute costs for current plan</button><div class="muted small" style="margin-top:6px;">Uses the batches from your last “Run Production Plan”. Run the plan first if this is empty.</div></div>
+  <div id="sim-results"></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -705,12 +720,83 @@ function exportReport(kind){
         html+='</table>';
       }
     });
-    var w=window.open('','_blank');
-    if(!w){toast('Allow pop-ups to make the PDF');return;}
-    w.document.write('<html><head><title>Gaavn Production '+_repDateFile()+'</title></head><body style="font-family:Arial,sans-serif;padding:18px;">'+html+'<script>window.onload=function(){setTimeout(function(){window.print();},250);}<\/script></body></html>');
-    w.document.close();
+    var pa=document.getElementById('print-area');
+    pa.innerHTML='<div style="font-family:Arial,sans-serif;">'+html+'</div>';
+    window.onafterprint=function(){pa.innerHTML='';window.onafterprint=null;};
+    setTimeout(function(){window.print();},150);
     return;
   }
+}
+
+// ---- COST SIMULATOR --------------------------------------------------
+var SIM_LS='gaavn_sim_rates_v1';
+var SIM_RATE_DEFS=[
+ ['bm','Buffalo milk (BM)','₹/L',57],
+ ['cm','Cow milk (CM)','₹/L',41],
+ ['sm','Skim milk (SM)','₹/L',24.5],
+ ['cream','Cream','₹/kg',300],
+ ['smp','SMP','₹/kg',345],
+ ['ps','PS / citric','₹/kg',150],
+ ['cacl2','CaCl2','₹/kg',3098],
+ ['aa','Acetic acid (AA)','₹/L',60],
+ ['sugar','Sugar','₹/kg',45],
+ ['curd','Curd (intermediate)','₹/kg',60],
+ ['packing','Packing','₹/kg out',1.6],
+ ['gas','Gas / fuel','₹/kg out',3]
+];
+function showSim(){document.getElementById('home-screen').style.display='none';document.getElementById('sim-screen').style.display='';renderSimRates();if(STATE.lastRun)computeCosts();window.scrollTo(0,0);}
+function hideSim(){document.getElementById('sim-screen').style.display='none';document.getElementById('home-screen').style.display='';window.scrollTo(0,0);}
+function renderSimRates(){
+  var saved={};try{saved=JSON.parse(localStorage.getItem(SIM_LS)||'{}');}catch(e){}
+  var h='';
+  SIM_RATE_DEFS.forEach(function(d){var v=(saved[d[0]]!=null)?saved[d[0]]:d[3];h+='<div class="simrow"><span>'+d[1]+' <span class="muted">'+d[2]+'</span></span><input type="number" step="0.01" id="simr-'+d[0]+'" value="'+v+'" oninput="saveSimRates()"></div>';});
+  document.getElementById('sim-rates').innerHTML=h;
+}
+function simRates(){var o={};SIM_RATE_DEFS.forEach(function(d){var el=document.getElementById('simr-'+d[0]);o[d[0]]=el?(parseFloat(el.value)||0):d[3];});return o;}
+function saveSimRates(){localStorage.setItem(SIM_LS,JSON.stringify(simRates()));}
+function simRateFor(name,rt){
+  var n=(name||'').toLowerCase();
+  if(n.indexOf('buffalo')>=0)return rt.bm;
+  if(n.indexOf('cow milk')>=0)return rt.cm;
+  if(n.indexOf('skim')>=0)return rt.sm;
+  if(n.indexOf('cream')>=0)return rt.cream;
+  if(n.indexOf('smp')>=0)return rt.smp;
+  if(n.indexOf('cacl')>=0)return rt.cacl2;
+  if(n==='aa'||n.indexOf('acetic')>=0)return rt.aa;
+  if(n==='ps')return rt.ps;
+  if(n.indexOf('sugar')>=0)return rt.sugar;
+  if(n.indexOf('chakka')>=0)return rt.curd/((std().chakka)||0.5);
+  if(n.indexOf('curd')>=0)return rt.curd;
+  return 0;
+}
+function computeCosts(){
+  var R=STATE.lastRun;var el=document.getElementById('sim-results');
+  if(!R){el.innerHTML='<div class="card"><div class="muted">Run a production plan first, then come back.</div></div>';return;}
+  var rt=simRates();var rows='';var total=0;
+  R.blocks.forEach(function(b){
+    if(b.short&&b.short.length)return;
+    var cost=0;
+    b.lines.forEach(function(l){cost+=(l[1]||0)*simRateFor(l[0],rt);});
+    cost+=(b.out||0)*((rt.packing||0)+(rt.gas||0));
+    var perkg=b.out>0?cost/b.out:0;total+=cost;
+    rows+='<div class="result-block"><h4>'+b.product+' — '+fmt(b.out)+' '+b.unit+'</h4>'
+      +'<div class="ing"><span>Batch cost</span><span>₹'+fmt(cost)+'</span></div>'
+      +'<div class="ing"><span>Cost per '+b.unit+'</span><span style="font-weight:800;color:var(--amber);">₹'+fmt(perkg)+'</span></div></div>';
+  });
+  var cg=(R.inv.excessCreamKg||0);var creamVal=cg*rt.cream;
+  var pool=R.pool;var dens=std().density;
+  var bmFatPerL=pool.bm.fat/100*dens;var fatBM=bmFatPerL>0?rt.bm/bmFatPerL:0;
+  var fatCream=(std().creamFat>0)?rt.cream/(std().creamFat/100):0;
+  var cheap=(fatBM>0&&fatBM<fatCream)?'BM':'Cream';
+  var out='<div class="card"><h3>Cost Breakdown</h3>'+rows
+    +'<hr><div class="ing"><span>Total ingredient + process cost</span><span>₹'+fmt(total)+'</span></div>'
+    +'<div class="ing"><span>Less cream→ghee value ('+fmt(cg)+' kg)</span><span>− ₹'+fmt(creamVal)+'</span></div>'
+    +'<div class="ing" style="font-weight:800;"><span>Net cost</span><span>₹'+fmt(total-creamVal)+'</span></div></div>';
+  out+='<div class="card"><h3>💡 Cheapest fat source</h3>'
+    +'<div class="ing"><span>Fat from BM</span><span>₹'+fmt(fatBM)+' /kg-fat</span></div>'
+    +'<div class="ing"><span>Fat from cream</span><span>₹'+fmt(fatCream)+' /kg-fat</span></div>'
+    +'<div style="font-weight:700;margin-top:6px;color:var(--green-d);">'+cheap+' is the cheaper fat to hit paneer fat targets today.</div></div>';
+  el.innerHTML=out;
 }
 
 // ---- init -------------------------------------------------------------
